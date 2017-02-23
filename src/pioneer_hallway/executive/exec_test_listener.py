@@ -3,11 +3,11 @@ import rospy
 from std_msgs.msg import String
 
 def test_callback(data):
-    rospy.loginfo(rospy.get_call_id() + "msg: ", data.data)
+    rospy.loginfo(rospy.get_caller_id() + "msg: %s", data.data)
 
 def obstacle_listener():
     rospy.init_node('exec_test_listen', anonymous=True)
-    rospy.Subscriber('exec_control_pub', String, test_callback)
+    rospy.Subscriber('controller_msg', String, test_callback)
     print "exec_test_listen set up and spinning..."
     rospy.spin()
 

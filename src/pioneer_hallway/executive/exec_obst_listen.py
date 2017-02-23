@@ -5,7 +5,7 @@ from std_msgs.msg import String
 obstacles = None
 
 def obstacle_callback(data):
-    rospy.loginfo(rospy.get_call_id() + "obstacle_msg: ", data.data)
+    rospy.loginfo(rospy.get_caller_id() + "obstacle_msg: %s", data.data)
 
 def obstacle_listener():
     rospy.init_node('exec_obs_listen', anonymous=True)
