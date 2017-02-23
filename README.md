@@ -9,7 +9,9 @@ Making a pioneer robot move down a hallway -- fast!
 ## Executive
 
 ## Controller
+
    Sends a "forward" message to the controller as String
+
    Listens to obst_tracker and controller for String
 
 # Usage
