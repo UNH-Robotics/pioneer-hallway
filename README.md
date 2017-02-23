@@ -14,7 +14,7 @@ Controller
 
 Make sure you have your own catkin workspace and use this repo as your src/ folder.
 
-You can work inside your own folder in src/ make sure to place your node into scripts/ as well.
+You can work inside your own folder in src/ make sure to make it executable.
 
 To build the package/nodes:
 ```bash
