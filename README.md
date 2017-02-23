@@ -6,9 +6,9 @@ Making a pioneer robot move down a hallway -- fast!
 
 ## Obstacle Tracker
 
-## Executive
-
 ## Controller
+
+## Executive
 
    Sends a "forward" message to the controller as String
 
