@@ -38,19 +38,23 @@
 
 import rospy
 from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Vector3
 
-def talker():
-    pub = rospy.Publisher('chatter', String, queue_size=10)
-    rospy.init_node('talker', anonymous=True)
+def move():
+    #here,when declare the topic, do we need to specify the robot?
+    #like /turtle1/cmd_vel
+    pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+    rospy.init_node('controller_publisher', anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        hello_str = "hello world %s" % rospy.get_time()
-        rospy.loginfo(hello_str)
-        pub.publish(hello_str)
+        motion = Twist(Vector3(0.2, 0, 0), Vector3(0, 0, 0))
+        rospy.loginfo("move forward")
+        pub.publish(motion)
         rate.sleep()
 
 if __name__ == '__main__':
     try:
-        talker()
+        move()
     except rospy.ROSInterruptException:
         pass
