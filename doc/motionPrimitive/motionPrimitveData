@@ -1,0 +1,18 @@
+Name	linear	parameter	angular	parameter
+a0	A	300		HL	pi/4
+a1	H	0		HL	pi/4
+a2	D	-300		HL	pi/4
+a3	A	300		SL	pi/8
+a4	H	0		SL	pi/8
+a5	D	-300		SL	pi/8
+a6	A	300		N	0
+a7	H	0		N	0
+a8	D	-300		N	0
+a9	A	300		HR	-pi/4
+a10	H	0		HR	-pi/4
+a11	D	-300		HR	-pi/4
+a12	A	300		SL	-pi/8
+a13	H	0		SL	-pi/8
+a14	D	-300		SL	-pi/8
+
+
