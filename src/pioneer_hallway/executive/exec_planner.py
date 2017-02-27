@@ -26,9 +26,9 @@ def obstacle_callback(data):
     rospy.loginfo(rospy.get_caller_id() + "obstacle_msg: %s", data.data)
 
 def obstacle_listener():
-    rospy.init_node('exec_obs_listenp', anonymous=True)
+    rospy.init_node('exec_obs_listen', anonymous=True)
     rospy.Subscriber('obst_tracker', String, obstacle_callback)
-    print("exec_obs_listenp waiting for obstacles...")
+    print("exec_obs_listen waiting for obstacles...")
     rospy.spin()
 
 # instance variables used to keep track of current state
