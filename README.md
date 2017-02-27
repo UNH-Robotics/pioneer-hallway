@@ -16,7 +16,7 @@ Making a pioneer robot move down a hallway -- fast!
 
    `exec_control_pub.py` - Sends a "forward" message to the controller as String
 
-   `exec_obst_listen.py` - Listens to `obst_tracker` for String
+   `exec_obst_listen.py` - Listens to `obst_tracker` for `String`
 
    `exec_test_listener.py` - Simple test by publishing a dummy node
 
