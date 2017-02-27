@@ -1,3 +1,3 @@
 #! /bin/bash
 
-java -jar planner.jar -timeout 300
+java -jar planner.jar $@
