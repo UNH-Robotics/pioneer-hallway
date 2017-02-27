@@ -10,9 +10,9 @@ Making a pioneer robot move down a hallway -- fast!
 
 ## Executive
 
-   Sends a "forward" message to the controller as String
+   `exec_control_pub.py' - Sends a "forward" message to the controller as String
 
-   Listens to obst_tracker for String
+   `exec_obst_listen.py` - Listens to obst_tracker for String
 
 # Usage
 
