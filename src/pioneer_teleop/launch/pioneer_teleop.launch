@@ -1,0 +1,9 @@
+<launch>
+	<include file="$(find teleop_twist_joy)/launch/teleop.launch"/>
+	
+	<node pkg="pioneer_teleop" type="pioneer_teleop.py" name="pioneer_teleop" output="screen">
+	  <param name="enableButton" value="0"/>
+	  <param name="turboButton" value="5"/>
+	  <param name="cancelButton" value="1"/>
+	</node>
+</launch>
