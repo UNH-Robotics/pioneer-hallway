@@ -1,7 +1,7 @@
 from threading import Thread
 from Queue import Queue, Empty
 
-class NonBlockingStreamReader:
+class NonBlockingStreamReader(object):
 
     def __init__(self, stream):
         '''
@@ -9,8 +9,8 @@ class NonBlockingStreamReader:
                 Usually a process' stdout or stderr.
         '''
 
-        self._s = stream
-        self._q = Queue()
+        self.stream = stream
+        self.queue = Queue()
 
         def _populateQueue(stream, queue):
             '''
@@ -24,14 +24,14 @@ class NonBlockingStreamReader:
                 else:
                     raise UnexpectedEndOfStream
 
-        self._t = Thread(target = _populateQueue,
-                args = (self._s, self._q))
-        self._t.daemon = True
-        self._t.start() #start collecting lines from the stream
+        self.thread = Thread(target = _populateQueue,
+                args = (self.stream, self.queue))
+        self.thread.daemon = True
+        self.thread.start() #start collecting lines from the stream
 
     def readline(self, timeout = None):
         try:
-            return self._q.get(block = timeout is not None,
+            return self.queue.get(block = timeout is not None,
                     timeout = timeout)
         except Empty:
             return None
