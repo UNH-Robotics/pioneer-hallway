@@ -42,13 +42,15 @@ def exec_control_pub(action):
  update these when we do forward projection 
  and/or when we look up the new state
 '''
-cur_x = 1.0
-cur_y = 1.0
-cur_lin = 0.0
-cur_rot = 0.0
+CurrentState = namedtuple("CurrentState", "x y lin rot")
+CurrentState.x = 1.0
+CurrentState.y = 1.0
+CurrentState.lin = 0.0
+CurrentState.rot = 0.0
 
 def print_cur_state():
-    return str(cur_x) + ' ' + str(cur_y) + ' ' + str(cur_lin) + ' ' + str(cur_rot)
+    return str(CurrentState.x) + ' ' + str(CurrentState.y) + \
+        ' ' + str(CurrentState.lin) + ' ' + str(CurrentState.rot)
 
 def send_msg_to_planner(master_clock, p, nbsr):
     msg = str(int(time.time() - master_clock)) + '\n' + print_cur_state() + '\n'
