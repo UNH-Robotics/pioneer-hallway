@@ -7,16 +7,27 @@ import rospy
 from std_msgs.msg import String
 from nbstreamreader import NonBlockingStreamReader as NBSR
 
-# set up a Db of structs for obstacles
-# these are what we pass to the planner
+''' 
+ TODO: find out the msg type and read
+       in the obstacles into the Db
+ set up a Db of structs for obstacles
+ these are what we pass to the planner
+'''
 Obstacle = namedtuple("Obstacle", "x y")
 ObstacleDb = []
 
-# callbacks
+'''
+ Callbacks -
+        obstacle_callback - stub for now, reads in obstacle Db
+'''
 def obstacle_callback(data):
     rospy.loginfo(rospy.get_caller_id() + "obstacle_msg %s", data.data)
 
-# initialize our ROS nodes here
+'''
+ Initialize our ROS nodes here -
+        pub - our only publisher to give controller actions
+        obst_track - assign our callback to the tracker
+'''
 pub = rospy.Publisher('controller_msg', String, queue_size=1)
 rospy.init_node('executive', anonymous=True)
 rate = rospy.Rate(10)
@@ -26,8 +37,11 @@ def exec_control_pub(action):
     rospy.loginfo(action)
     pub.publish(action)
 
-# instance variables used to keep track of current state
-# update these when we do forward projection
+'''
+ used to keep track of current state
+ update these when we do forward projection 
+ and/or when we look up the new state
+'''
 cur_x = 1.0
 cur_y = 1.0
 cur_lin = 0.0
@@ -54,8 +68,7 @@ if __name__ == '__main__':
     planner = subprocess.Popen("./planner.sh -timeout 250",
                                shell=True,
                                stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
+                               stdout=subprocess.PIPE)
     nbsr = NBSR(planner.stdout)
     # give time for the planner to initialize
     time.sleep(3)
@@ -69,13 +82,7 @@ if __name__ == '__main__':
             cur_clock, action = send_msg_to_planner(master_clock, planner, nbsr)
             exec_control_pub(action)
             master_clock = cur_clock
-    except rospy.ROSInterruptException:
+        raise rospy.ROSException("ESTOP")
+    except (rospy.ROSInterruptException, rospy.ROSException):
         print("ESTOP")
         pass
-#    obstacle_listener()
-#    try:        
-#        send_msg_to_planner()
-#        publish_action()
-#    except rospy.ROSInterruptException:
-#        pass
-    
