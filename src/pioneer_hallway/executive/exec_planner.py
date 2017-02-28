@@ -51,7 +51,11 @@ def send_msg_to_planner(master_clock, p, nbsr):
 if __name__ == '__main__':
     # fork and create a child subprocess of the planner
     print("Running Planner with 3s startup time...")
-    planner = subprocess.Popen("./planner.sh -timeout 250", shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    planner = subprocess.Popen("./planner.sh -timeout 250",
+                               shell=True,
+                               stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
     nbsr = NBSR(planner.stdout)
     # give time for the planner to initialize
     time.sleep(3)
