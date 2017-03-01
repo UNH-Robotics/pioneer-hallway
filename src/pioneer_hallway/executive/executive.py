@@ -15,8 +15,7 @@ def obstacle_listener():
     rospy.init_node('exec_obs_listen', anonymous=True)
     rospy.Subscriber('obst_tracker', String, obstacle_callback)
     print "exec_obs_listen set up and spinning..."
-    rospy.spin()
-
+    
 def controller_callback(data):
     rospy.loginfo(rospy.get_call_id() + "controller_msg: ", data.data)
 
@@ -24,7 +23,6 @@ def controller_listener():
     rospy.init_node('exec_control_listen', anonymous=True)
     rospy.Subscriber('controller', String, controller_callback)
     print "exec_control_listen set up and spinning..."
-    rospy.spin()
     
 def executive():
     pub = rospy.Publisher('controller_msg', String, queue_size=10)

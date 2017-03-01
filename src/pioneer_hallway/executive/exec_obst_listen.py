@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import rospy
 from std_msgs.msg import String
+from collections import namedtuple
 
-obstacles = None
+Obstacle = namedtuple("Obstacle", "x y")
+ObstacleDb = []
 
 def obstacle_callback(data):
     rospy.loginfo(rospy.get_caller_id() + "obstacle_msg: %s", data.data)

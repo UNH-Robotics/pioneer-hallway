@@ -10,9 +10,15 @@ Making a pioneer robot move down a hallway -- fast!
 
 ## Executive
 
-   Sends a "forward" message to the controller as String
+   `controller_msg` - publisher type `String` - the actions from the planner
+   
+   `exec_planner.py` - Forks the planner as a subprocess, sends it the current state and publishes the action from the planner, listens to `obst_tracker` to update the state for the planner
 
-   Listens to obst_tracker for String
+   `exec_control_pub.py` - Sends a "forward" message to the controller as String
+
+   `exec_obst_listen.py` - Listens to `obst_tracker` for `String`
+
+   `exec_test_listener.py` - Simple test by publishing a dummy node
 
 # Usage
 
