@@ -23,6 +23,13 @@ def transition(state, action):
     rot = state.rot
     raise NotImplementedError
 
+'''
+ Given (action)
+ Return (action_lin, action_rot)
+ where action_line is an float [-300,0,300]
+       action_rot is a float [pi/4, pi/8, 0, -pi/4, -pi/8]
+ from motionPrimitiveData in the docs
+'''
 def lookUpPrimitiveAction(action):
     raise NotImplementedError
     
