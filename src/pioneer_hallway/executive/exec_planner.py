@@ -5,15 +5,30 @@ import time
 import sys
 import rospy
 from std_msgs.msg import String
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from nbstreamreader import NonBlockingStreamReader as NBSR
+
+sys.path.insert(0, "../src/")
+import Lib
+
 
 ''' 
  TODO: find out the msg type and read
        in the obstacles into the Db
  set up a Db of structs for obstacles
  these are what we pass to the planner
+
+ t = obst.header.stamp.sec
+ x = obst.pose.pose.position.x
+ y = obst.pose.pose.position.y
+ cov = obst.pose.covariance
+       6x6 covariance matrix
+       (x, y, z, rotX, rotY, rotZ)
+       we care about covX, covY
+       covX = cov[?]
+       covY = cov[?]
 '''
-Obstacle = namedtuple("Obstacle", "x y")
+Obstacle = namedtuple("Obstacle", "t x y cov")
 ObstacleDb = []
 
 '''
@@ -76,6 +91,7 @@ def send_msg_to_planner(master_clock, p, nbsr):
 
 if __name__ == '__main__':
     # fork and create a child subprocess of the planner
+    Lib.transition(CurrentState, 'a0')
     print("Running Planner with 3s startup time...")
     planner = subprocess.Popen("./planner.sh -timeout 250",
                                shell=True,
