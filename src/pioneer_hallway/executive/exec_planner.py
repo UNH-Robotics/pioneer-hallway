@@ -48,6 +48,16 @@ CurrentState.y = 1.0
 CurrentState.lin = 0.0
 CurrentState.rot = 0.0
 
+'''
+ Sets the CurrentState to a new given state
+ pos (x,y) linear rotational velocity
+'''
+def set_cur(x, y, lin, rot):
+    CurrentState.x = x
+    CurrentState.y = y
+    CurrentState.lin = lin
+    CurrentState.rot = rot
+
 def print_cur_state():
     return str(CurrentState.x) + ' ' + str(CurrentState.y) + \
         ' ' + str(CurrentState.lin) + ' ' + str(CurrentState.rot)
