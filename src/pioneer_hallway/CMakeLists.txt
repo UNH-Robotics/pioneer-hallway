@@ -75,6 +75,7 @@ find_package(catkin REQUIRED COMPONENTS
    DEPENDENCIES
    std_msgs
    sensor_msgs
+   geometry_msgs
  )
 
 ################################################
