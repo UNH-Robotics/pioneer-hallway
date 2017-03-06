@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import rospy
-from pioneer_hallway.msg import Obsticles
+from pioneer_hallway.msg import *
 from sensor_msgs.msg import LaserScan
 from nav_msgs.srv import GetMap
+from pioneer_hallway.srv import GetObsticles
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import *
 import numpy as np
@@ -212,7 +213,7 @@ def init_node():
     rospy.init_node('obst_tracker')
     rospy.wait_for_service('static_map')
     try:
-        world_map = rospy.ServiceProxy('static_map', OccupancyGrid)()
+        world_map = (rospy.ServiceProxy('static_map', GetMap)()).map
         meta_map = world_map.info
         real_map = set()
         map_resolution = meta_map.resolution
