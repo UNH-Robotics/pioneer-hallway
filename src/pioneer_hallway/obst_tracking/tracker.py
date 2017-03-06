@@ -9,10 +9,42 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 import numpy as np
 
 
-obst_publisher = None
+obsticles = []
 world_map = None
 position_estimate = None
 map_resolution = None
+
+
+
+class Obsticle:
+    F = np.array( [[ 1, 0, .005, 0 ],
+            [ 0, 1, 0, 0.005 ],
+            [ 0, 0, 1, 0 ],
+            [ 0, 0, 0, 1 ])
+
+    H = np.array([ 1, 1, 0, 0  ])
+    def __init__(self, x, y, time, cov):
+        self.state = np.array([ x, y, 0, 0 ])
+        self.cov = np.diag([cov, cov, cov, cov])
+        self.lasttime = time
+
+    def prediction(self, dt, state=None):
+        if state == None:
+            state = self.state
+        new_state = np.dot( Obsticle.F, state )
+        new_cov = np.dot( Obsticle.F, np.dot( self.cov, Obsticle.F.T ) )
+        return (new_state, new_cov)
+
+    def update(state, time, cov):
+        (X_k, P_k) = prediction( time - self.lasttime )
+        residual = state - np.dot( Obsticle.H, X_k )
+        S_k = np.dot(Obsticle.H, np.dot( P_k, Obsticle.H.T )) + np.diag([ cov, cov, cov, cov ])
+        K_k = np.dot( P_k, np.dot( Obtsicle.H.T, np.inv( S_k ) ) )
+        self.state = X_k + np.dot( K_k, residual )
+        self.cov = P_k - np.dot( K_k, np.dot( S_k, K_k.T ) )
+
+
+
 
 
 def distance(p1, p2):
@@ -20,12 +52,24 @@ def distance(p1, p2):
 
 def cluster_points(points, maxDistance):
     clusters = []
+    usedPoints = np.zeros(len(points))
+
     for i in xrange(len( points )):
+        if usedPoints[i] == 1:
+            continue
+        else:
+            usedPoints[i] = 1
         canopy = set([points[i]])
         for j in xrange(i+1, len( points ) ):
+            if usedPoints[j] == 1:
+                continue
             if dist( points[i], points[j] ) < maxDistance:
                 canopy.add(point[j])
+                usedPoints[j] = 1
         clusters.append( canopy )
+    return clusters
+
+
 
 
 
@@ -59,13 +103,24 @@ def rotate_points_about_origin( points, theta ):
     return np.dot( points, R.T )
 
 def update_position(data):
-    position_estimate = data
+    position_estimate = data.pose.pose
 
 def handle_scan_input(data):
-    obst_publisher.publish(Obsticles())
+    if position_estimate == None:
+        return
+    points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
+    points = np.dot( points, np.array( [[ -position_estimate.orientation.x, position_estimate.orientation.y ],
+        [-position_estimate.orientation.y, -position_estimate.orientation.x]] ) )
+    points = translate_points( points, ( data.position.x, data.position.y ) )
+    clusters = cluster_points(points)
+
+
+def handle_obsticle_request(req):
+
+
+
 
 def init_node():
-    obst_publisher = rospy.Publisher('obsticles', Obsticles, queue_size=1)
     rospy.init_node('obst_tracker')
     rospy.wait_for_service('static_map')
     try:
@@ -81,6 +136,8 @@ def init_node():
 
     except rospy.ServiceException, e:
         print("Service Error: Could not obtain static map")
+
+    rospy.Service("get_obsticles", GetObsticles, handle_obsticle_request)
 
 def subscribe():
     rospy.Subscriber("scan", LaserScan, handle_scan_input)

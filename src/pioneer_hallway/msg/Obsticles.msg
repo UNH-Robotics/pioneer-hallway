@@ -1,4 +1,5 @@
 Header header
 
-sensor_msgs/JointState[] obsticles
+int8 count
+pioneer_hallway_msgs/ObsticlePrediction[] obsticles
 
