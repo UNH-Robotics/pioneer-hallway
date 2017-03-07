@@ -1,0 +1,12 @@
+1. Hub computer (designated to run Gazebo physics simulation)
+  rosrun pioneer_networking run-pioneer-hub
+2. Remote computers (designated to run Pioneer navigation)
+  export HOSTNAME
+  roslaunch pioneer_networking pioneer_gateway.launch
+3. Hub gateway terminal
+  rosrun pioneer_gazebo run-multi-pioneer-gazebo-master
+4. Remote computers
+  # edit ROBOT_NAME variable in run-pioneer-nav-local line 6 to reflect pioneer number (currently should match aadi computer number)
+  rosrun pioneer_gazebo run-pioneer-nav-local
+5. Hub gateway terminal
+  roslaunch pioneer_description multi_pioneer_rviz.launch

@@ -1,0 +1,6 @@
+<launch>
+  <!-- REDUNDANT LAUNCH FILE: Transforms are already handled by Gazebo -->
+  <node name="pioneer_tf_broadcaster" pkg="pioneer_ros" type="pioneer_tf_broadcaster"/>
+  
+  <node name="pioneer_odom_publisher" pkg="pioneer_ros" type="pioneer_odom_publisher"/>
+</launch>

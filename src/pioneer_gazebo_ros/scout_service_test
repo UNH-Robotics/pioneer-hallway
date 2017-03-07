@@ -1,0 +1,78 @@
+#!/bin/bash
+
+PATH=$(echo $PATH | sed 's|/home/aadi-workstation/anaconda3/bin:||g')
+export PATH=$PATH
+ 
+my_pid=$$
+echo "My process ID is $my_pid"
+
+echo "Launching roscore..."
+roscore &
+pid=$!
+
+echo "Launching Gazebo..."
+sleep 10s
+roslaunch pioneer_gazebo scout_service_world.launch &
+pid="$pid $!"
+
+echo "Loading initialisation parameters..."
+sleep 10s
+roslaunch pioneer_description scout_service_description.launch
+roslaunch scout_service scout_service_params.launch
+
+echo "Launching Pioneers in Gazebo stack..."
+sleep 5s
+for i in `seq 1 3`;
+do
+  roslaunch pioneer_description generic_pioneer.launch name:=pioneer$i pose:="-x $(rosparam get /pioneer$i/x) -y $(rosparam get /pioneer$i/y) -Y $(rosparam get /pioneer$i/a)" &
+  pid="$pid $!"
+  sleep 7s
+done
+
+echo "Launching map server..."
+sleep 5s
+roslaunch nav_bundle map_server.launch map_name:=scout_service &
+pid="$pid $!"
+
+echo "Launching scout navigation stack..."
+sleep 5s
+for i in `seq 1 1`;
+do
+  roslaunch nav_bundle single_navigation_scout.launch robot_name:=pioneer$i x:="$(rosparam get /pioneer$i/x)" y:="$(rosparam get /pioneer$i/y)" yaw:="$(rosparam get /pioneer$i/a)" &
+  pid="$pid $!"
+  
+  sleep 5s
+  
+  roslaunch scout_service generic_scout.launch robot_name:=pioneer$i &
+  pid="$pid $!"
+  
+  sleep 5s
+done
+
+echo "Launching service navigation stack..."
+sleep 5s
+for i in `seq 2 3`;
+do
+  roslaunch nav_bundle single_navigation_service.launch robot_name:=pioneer$i x:="$(rosparam get /pioneer$i/x)" y:="$(rosparam get /pioneer$i/y)" yaw:="$(rosparam get /pioneer$i/a)" &
+  pid="$pid $!"
+  
+  sleep 5s
+  
+  roslaunch scout_service generic_service.launch robot_name:=pioneer$i &
+  pid="$pid $!"
+  
+  sleep 5s
+done
+
+echo "Launching rover list manager..."
+roslaunch scout_service rover_lists.launch &
+pid="$pid $!"
+
+
+echo "Launching rviz..."
+roslaunch pioneer_description scout_service_rviz.launch &
+pid="$pid $!"
+
+trap "echo Killing all processes.; kill -2 TERM $pid; exit" SIGINT SIGTERM
+
+sleep 24h

@@ -1,0 +1,4 @@
+<launch>
+  <!-- Show in Rviz   -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find pioneer_description)/launch/rags_traffic.rviz"/>
+</launch>

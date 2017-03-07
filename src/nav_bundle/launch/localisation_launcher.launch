@@ -1,0 +1,10 @@
+<launch>
+  <!-- Run AMCL (noisy localisation)-->
+  <arg name="robot_name"/>
+  <include file="$(find nav_bundle)/launch/amcl_pioneer.launch">
+    <arg name="tf_name" value="$(arg robot_name)"/>
+  </include>
+  <!-- Assert fixed transform between map and odom (perfect localisation) -->
+<!--  <arg name="robot_name"/>-->
+<!--  <node pkg="tf" type="static_transform_publisher" name="map_odom_broadcaster" args="0 0 0 0 0 0 1 /map $(arg robot_name)/odom 100" output="screen"/>-->
+</launch>

@@ -1,0 +1,17 @@
+<launch>
+  <!-- SLAM mapping nodes -->
+  <node pkg="gmapping" type="slam_gmapping" name="gmapping">
+		  <remap from="scan" to="base_scan"/> 
+  </node>
+  
+  <!-- Include move base launch file -->
+  <!-- Use with Pioneer Gazebo simulation and Pioneer3dx robot platform -->
+	<include file="$(find pioneer_2dnav)/move_base_vel_throttle.launch"/>
+	
+	<!-- Use with stagebot simulation -->
+<!--	<include file="$(find stagebot_2dnav)/move_base.launch"/> -->
+  
+  <!-- Move base clients for waypoint navigation -->
+  <node pkg="simple_navigation_goals" type="base_link_navigation_client" name="base_link_goal_client" output="screen"/>
+  <node pkg="simple_navigation_goals" type="map_navigation_client" name="map_goal_client" output="screen"/>
+</launch>

@@ -1,0 +1,6 @@
+<launch>
+	<!-- Robot controller parameters -->
+  <node pkg="pioneer_test" type="pioneer3dx_pid_controller" name="pioneer_test">
+  	<rosparam file="$(find pioneer_test)/pioneer_controller_params.yaml" command="load"/>
+  </node>
+</launch>

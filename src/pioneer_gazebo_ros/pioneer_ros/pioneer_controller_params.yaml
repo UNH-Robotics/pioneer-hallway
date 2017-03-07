@@ -1,0 +1,28 @@
+controller_gains:
+    left:
+        linear:
+            p: 10.87
+            i: 0.01
+            d: 0.1
+        angular:
+            p: 3.37
+            i: 0.01
+            d: 0.1
+    right:
+        linear:
+            p: 10.87
+            i: 0.01
+            d: 0.1
+        angular:
+            p: 3.37
+            i: 0.01
+            d: 0.1
+    body:
+        linear:
+            p: 1.00
+            i: 0.01
+            d: 0.1
+        angular:
+            p: -1.00
+            i: 0.01
+            d: 0.1

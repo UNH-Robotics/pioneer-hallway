@@ -1,0 +1,11 @@
+<launch>
+  <!-- Make sure initial pose matches $(find pioneer_description)/launch/pioneers.launch arg init_pose -->
+  <include file="$(find nav_bundle)/launch/amcl_no_namespace.launch"/>
+  <include file="$(find pioneer_2dnav)/move_base_global.launch"/>
+  <node pkg="simple_navigation_goals" type="map_navigation_client" name="map_goal_client" output="screen"/>
+  <include file="$(find pioneer_ros)/launch/pioneer_controller_spin_recover.launch"/>
+  
+<!--    <include file="$(find scout_service)/launch/scout.launch">-->
+<!--      <arg name="robot_name" value="$(arg robot_name)" />-->
+<!--    </include>-->
+</launch>

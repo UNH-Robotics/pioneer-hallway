@@ -1,0 +1,8 @@
+<launch>
+  <arg name="map_name" default="utm_0"/>
+
+  <!-- Run the map server -->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find pioneer_test)/map/$(arg map_name).yaml" >
+    <param name="frame_id" value="/map" />
+  </node>
+</launch>

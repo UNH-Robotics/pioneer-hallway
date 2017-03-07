@@ -1,0 +1,68 @@
+#!/bin/bash
+
+source ~/catkin_ws/devel/setup.bash
+ 
+my_pid=$$
+echo "My process ID is $my_pid"
+
+echo "Launching roscore..."
+roscore &
+pid=$!
+
+echo "Launching Gazebo..."
+sleep 5s
+roslaunch pioneer_gazebo pioneer_traffic_utm_demo_world.launch &
+pid="$pid $!"
+
+echo "Loading initialisation parameters..."
+sleep 5s
+roslaunch pioneer_description utm_demo_traffic_description.launch
+
+echo "Launching Pioneers in Gazebo stack..."
+sleep 5s
+for i in `seq 1 4`;
+do
+  roslaunch pioneer_description generic_pioneer.launch name:=pioneer$i pose:="-x $(rosparam get /pioneer$i/x) -y $(rosparam get /pioneer$i/y) -Y $(rosparam get /pioneer$i/a)" &
+  pid="$pid $!"
+  sleep 2s
+done
+
+echo "Launching map server..."
+sleep 5s
+roslaunch nav_bundle map_server.launch map_name:=utm_hardware_demo5 &
+pid="$pid $!"
+
+echo "Launching navigation stack..."
+sleep 5s
+for i in `seq 1 4`;
+do
+  roslaunch nav_bundle single_navigation_utm_traffic.launch robot_name:=pioneer$i x:="$(rosparam get /pioneer$i/x)" y:="$(rosparam get /pioneer$i/y)" yaw:="$(rosparam get /pioneer$i/a)" &
+  pid="$pid $!"
+  sleep 2s
+done
+
+echo "Launching agents..."
+sleep 5s
+roslaunch utm_agent utm_agent.launch &
+
+echo "Initializing graph..."
+sleep 5s
+rosrun utm_traffic utm_graph_publisher &
+
+echo "Launching rviz..."
+sleep 5s
+rosrun rviz rviz -d "$(rospack find pioneer_description)/launch/utm_small_world_four_pioneers.rviz" &
+pid="$pid $!"
+
+echo "Sending initial waypoints..."
+sleep 5s
+rostopic pub -1 /pioneer1/cmd_map_goal geometry_msgs/Twist '[1.86, -0.26, 0.0]' '[0.0, 0.0, 0.0]' &
+rostopic pub -1 /pioneer2/cmd_map_goal geometry_msgs/Twist '[-0.42, -0.26, 0.0]' '[0.0, 0.0, 0.0]' &
+rostopic pub -1 /pioneer3/cmd_map_goal geometry_msgs/Twist '[1.86, 3.24, 0.0]' '[0.0, 0.0, 0.0]' &
+rostopic pub -1 /pioneer4/cmd_map_goal geometry_msgs/Twist '[-0.42, 3.24, 0.0]' '[0.0, 0.0, 0.0]' &
+
+trap "echo Killing all processes.; kill -2 TERM $pid; exit" SIGINT SIGTERM
+
+echo "Simulation active"
+
+sleep 24h
