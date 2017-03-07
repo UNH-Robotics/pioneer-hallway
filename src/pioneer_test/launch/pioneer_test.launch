@@ -1,0 +1,16 @@
+<launch>
+  <!-- RosAria -->
+  <node pkg="rosaria" type="RosAria" name="RosAria" output="screen"/>
+  
+  <!-- Sensors -->
+  <include file="$(find pioneer_test)/launch/pioneer_sensors.launch"/>
+  
+  <!-- Nav bundle -->
+  <include file="$(find nav_bundle)/launch/nav_bundle.launch"/>
+  
+  <!-- PID controller -->
+  <include file="$(find pioneer_test)/launch/pioneer_controller.launch"/>
+  
+  <!-- Visualise -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(rospack find pioneer_test)/pioneer_test_rviz_config.rviz"/>
+</launch>

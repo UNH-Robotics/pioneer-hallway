@@ -1,0 +1,46 @@
+#!/bin/bash
+ 
+my_pid=$$
+echo "My process ID is $my_pid"
+
+echo "Launching roscore..."
+roscore &
+pid=$!
+sleep 5s
+
+echo "Launching Gazebo..."
+roslaunch pioneer_gazebo pioneer_traffic_small_world_single.launch &
+pid="$pid $!"
+
+sleep 5s
+
+#echo "Launching transform publishers..."
+#roslaunch pioneer_ros pioneer_ros.launch &
+#pid="$pid $!"
+
+#sleep 3s
+
+echo "Launching navigation stack..."
+roslaunch nav_bundle nav_bundle.launch &
+pid="$pid $!"
+
+sleep 3s
+
+echo "Launching controller..."
+roslaunch pioneer_ros pioneer_controller.launch &
+pid="$pid $!"
+
+echo "Launching Rviz..."
+roslaunch pioneer_description pioneer_rviz.launch &
+pid="$pid $!"
+
+#sleep 1s
+
+#echo "Launching estop..."
+#rqt --standalone rqt_estop
+
+#sleep 1s
+
+trap "echo Killing all processes.; kill -2 TERM $pid; exit" SIGINT SIGTERM
+
+sleep 24h

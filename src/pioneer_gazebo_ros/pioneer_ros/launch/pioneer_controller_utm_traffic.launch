@@ -1,0 +1,10 @@
+<launch>
+	<!-- Robot controller parameters -->
+  <node pkg="pioneer_ros" type="pioneer_pid_controller" name="pioneer_ros">
+  	<rosparam file="$(find pioneer_ros)/pioneer_controller_params.yaml" command="load"/>
+  	<remap from="pioneer/cmd_vel" to="controller_cmd_vel"/>
+  </node>
+  <node pkg="pioneer_ros" type="turn_robot_around.py" name="turn_robot_around">
+    <remap from="pioneer/cmd_vel" to="recovery_cmd_vel"/>
+  </node>
+</launch>

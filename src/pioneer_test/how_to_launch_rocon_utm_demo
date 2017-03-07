@@ -1,0 +1,28 @@
+1. Hub computer (designated to run utm agents)
+
+  rosrun pioneer_networking run-pioneer-hub
+
+2. Remote computers (designated to run pioneer traffic)
+
+  export HOSTNAME
+  roslaunch pioneer_networking pioneer_gateway.launch
+
+# In the same gateway terminal
+  rosrun rosaria RosAria
+
+# Open new terminal from the gateway terminal (ctrl + shift + t)
+# edit ROBOT_NAME variable in pioneer_test/run-utm-demo-hardware line 6 to reflect pioneer number (should match aadi computer number)
+  ./catkin_ws/src/pioneer_test/run-utm-demo-hardware
+
+# Open new terminal from the gateway terminal (ctrl + shift + t)
+# edit ROBOT_NAME variable in rocon_flip/scripts/utm-demo-flips line 6 to reflect pioneer number (should match aadi computer number)
+  rosrun rocon_flip utm-demo-flips
+  
+# Open new terminal from the gateway terminal (ctrl + shift + t)
+  rostopic pub -1 /cmd_map_goal geometry_msgs/Twist '[0, 0, 0]' '[0, 0, 0]' (an appropriate waypoint)
+  
+3. Hub gateway terminal
+  roslaunch utm_agent utm_agent.launch
+  
+# Open new terminal from the gateway terminal (ctrl + shift + t)
+  rosrun rocon_flip advertise-from-hub-utm

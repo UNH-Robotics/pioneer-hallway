@@ -1,0 +1,44 @@
+#!/bin/bash
+
+echo "Launching roscore..."
+roscore &
+pid=$!
+sleep 5s
+
+echo "Connecting to RosAria..."
+rosrun rosaria RosAria &
+pid="$! $pid"
+sleep 3s
+
+echo "Launching sensors..."
+roslaunch pioneer_test pioneer_sensors.launch &
+pid="$! $pid"
+
+sleep 3s
+
+echo "Launching navigation stack..."
+roslaunch nav_bundle nav_bundle.launch &
+pid="$! $pid"
+
+sleep 3s
+
+echo "Launching pioneer controller..."
+roslaunch pioneer_test pioneer_controller_spin_recover.launch &
+pid="$! $pid"
+
+sleep 3s
+
+echo "Launching rviz..."
+rosrun rviz rviz -d "$(rospack find pioneer_test)/pioneer_test_frontier_rviz_config.rviz" &
+pid="$! $pid"
+
+sleep 1s
+
+#echo "Launching estop..."
+#rqt --standalone rqt_estop
+
+sleep 1s
+
+trap "echo Killing all processes.; kill -2 $pid; exit" SIGINT SIGTERM
+
+sleep 24h

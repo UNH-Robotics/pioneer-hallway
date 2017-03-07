@@ -1,0 +1,425 @@
+<?xml version="1.0"?>
+<!-- Adapted from the p2os package, see http://wiki.ros.org/p2os -->
+<!-- Git repository at https://github.com/allenh1/p2os -->
+
+<robot name="pioneer3dx" xmlns:xacro="http://ros.org/wiki/xacro">
+
+
+  <xacro:include filename="$(find pioneer_description)/urdf/pioneer3dx_wheel.xacro"/>
+  <xacro:include filename="$(find pioneer_description)/urdf/materials.xacro" />
+  <xacro:include filename="$(find pioneer_description)/urdf/pioneer.gazebo" />
+
+<!-- Base link to interface with gmapping and move_base -->
+	<link name="base_link"/>
+
+<!-- Chassis -->
+  <joint name="chassis_joint" type="fixed">
+    <origin xyz="-0.045 0 0.148" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="chassis"/>
+  </joint>
+
+  <link name="chassis">
+    <visual name="chassis_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry name="pioneer_geom">
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/chassis.stl"/>
+			</geometry>
+			<material name="ChassisRed"/>
+    </visual>
+    <collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/chassis.stl"/>
+				<!--box size="0.43 0.277 0.17"/-->
+			</geometry>
+		</collision>
+		<inertial>
+		  <mass value="5.67"/>
+		  <inertia ixx="0.07" ixy="0" ixz="0"
+		    iyy="0.08" iyz="0"
+		    izz="0.10"
+		  />
+		</inertial>
+  </link>
+
+<!-- Top -->
+	<joint name="base_top_joint" type="fixed">
+		<origin xyz="-0.045 0 0.234" rpy="0 0 0"/>
+		<parent link="base_link"/>
+		<child link="top_plate"/>
+	</joint>
+
+	<link name="top_plate">
+		<visual>
+			<inertial>
+				<mass value="0.01"/>	
+				<origin xyz="0 0 0"/>
+				<inertia ixx="1" ixy="0" ixz="0"
+					 iyy="1" iyz="0"
+	 				izz="1"/>
+			</inertial>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry name="top_geom">
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/top.stl"/>
+			</geometry>
+			<material name="TopBlack"/>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/top.stl"/>
+				<!--box size="0.44 0.38 0.005"/-->
+			</geometry>
+		</collision>
+	</link>
+
+<!-- Swivel -->
+	<joint name="base_swivel_joint" type="continuous">
+		<origin xyz="-0.185 0 0.055" rpy="0 0 0"/>
+		<axis xyz="0 0 1"/>
+		<!--<anchor xyz="0 0 0"/>
+  	<limit effort="100" velocity="100" k_velocity="0" />
+  	<joint_properties damping="0.0" friction="0.0" />-->
+		<parent link="base_link"/>
+		<child link="swivel"/>
+	</joint>
+	
+	<link name="swivel">
+		<inertial>
+			<mass value="0.1"/>	
+			<origin xyz="0 0 0"/>
+			<inertia ixx="0.01" ixy="0" ixz="0"
+				 iyy="0.01" iyz="0" izz="0.01"/>
+  	</inertial>
+	  <visual name="base_visual">
+		  <origin xyz="0 0 0" rpy="0 0 0"/>
+		  <geometry name="pioneer_geom">
+			  <mesh filename="package://pioneer_description/meshes/p3dx_meshes/swivel.stl"/>
+		  </geometry>
+		  <material name="swivel"/>
+	  </visual>
+	  <collision>
+		  <origin xyz="0 0 0" rpy="0 0 0"/>
+		  <geometry>
+			  <mesh filename="package://pioneer_description/meshes/p3dx_meshes/swivel.stl"/>
+		  </geometry>
+	  </collision>
+	</link>
+
+<!-- Center Wheel + Hubcap -->
+	<link name="center_hubcap">
+		<inertial>
+			<mass value="0.01"/>	
+			<origin xyz="0 0 0"/>
+			<inertia ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+				 iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943"/>
+  	 	</inertial>
+	  <visual name="base_visual">
+		  <origin xyz="0 0 0" rpy="0 0 0"/>
+		  <geometry name="pioneer_geom">
+			  <mesh filename="package://pioneer_description/meshes/p3dx_meshes/center_hubcap.stl"/>
+		  </geometry>
+		  <material name="HubcapGrey"/>
+	  </visual>
+	  <collision>
+		  <origin xyz="0 0 0" rpy="0 0 0"/>
+		  <geometry>
+			  <mesh filename="package://pioneer_description/meshes/p3dx_meshes/center_hubcap.stl"/>
+		  </geometry>
+	  </collision>
+	</link>
+
+	<joint name="swivel_hubcap_joint" type="continuous">
+		<origin xyz="-0.026 0 -0.016" rpy="0 0 0"/>
+		<axis xyz="0 1 0"/>
+		<!--<anchor xyz="0 0 0"/>
+    <limit effort="1000" velocity="1000" k_velocity="0" />
+    <joint_properties damping="0.0" friction="0.0" />-->
+	  <parent link="swivel"/>
+		<child link="center_wheel"/>
+	</joint>
+
+	<link name="center_wheel">
+		<inertial>
+			<mass value="0.1"/>	
+			<origin xyz="0 0 0"/>
+			<inertia ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+				 iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943"/>
+  	 	</inertial>
+	  <visual name="base_visual">
+		  <origin xyz="0 0 0" rpy="0 0 0"/>
+		  <geometry name="pioneer_geom">
+			  <mesh filename="package://pioneer_description/meshes/p3dx_meshes/center_wheel.stl"/>
+		  </geometry>
+		  <material name="WheelBlack"/>
+	  </visual>
+	  <collision>
+		  <origin xyz="0 0 0" rpy="0 0 0"/>
+		  <geometry>
+		    <mesh filename="package://pioneer_description/meshes/p3dx_meshes/center_wheel.stl"/>
+			  <!--<cylinder radius="0.0375" length="0.03"/>-->
+		  </geometry>
+	  </collision>
+	</link>
+
+	<joint name="center_wheel_joint" type="fixed">
+		<origin xyz="-0.0035 0 -0.001" rpy="0 0 0"/>
+		<parent link="center_wheel"/>
+		<child link="center_hubcap"/>
+	</joint>
+	
+	<!-- Left Wheel -->
+	<joint name="base_left_wheel_joint" type="continuous">
+		<origin xyz="0 0.155 0.093" rpy="0 0 0"/>
+		<axis xyz="0 1 0"/>
+		<!--<anchor xyz="0 0 0"/>
+  	<limit effort="1000" velocity="1000" k_velocity="0" />
+  	<joint_properties damping="0.0" friction="0.0" />-->
+		<parent link="base_link"/>
+		<child link="left_wheel"/>
+	</joint>
+
+	<link name="left_wheel">
+	  <inertial>
+			<mass value="0.1"/>	
+			<origin xyz="0 0 0"/>
+		  <inertia ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+				 iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943"/>
+  	</inertial>
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/left_wheel.stl"/>
+			</geometry>
+			<material name="WheelBlack"/>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+			  <mesh filename="package://pioneer_description/meshes/p3dx_meshes/left_wheel.stl"/>
+				<!--<cylinder radius="0.092" length="0.04"/>-->
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="left_wheel_hub_joint" type="fixed">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<parent link="left_wheel"/>
+		<child link="left_hub"/>
+	</joint>
+
+	<link name="left_hub">
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/left_hubcap.stl"/>
+			</geometry>
+			<material name="HubcapYellow"/>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/left_hubcap.stl"/>
+			</geometry>
+		</collision>
+	</link>
+	
+	<!-- Right Wheel -->
+	<joint name="base_right_wheel_joint" type="continuous">
+		<origin xyz="0 -0.155 0.093" rpy="0 0 0"/>
+		<axis xyz="0 1 0"/>
+		<!--<anchor xyz="0 0 0"/>
+  	<limit effort="1000" velocity="1000" k_velocity="0" />
+  	<joint_properties damping="0.0" friction="0.0" />-->
+		<parent link="base_link"/>
+		<child link="right_wheel"/>
+	</joint>
+
+	<link name="right_wheel">
+  	<inertial>
+			<mass value="0.1"/>	
+			<origin xyz="0 0 0"/>
+			<inertia ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+				 iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943"/>
+  	</inertial>
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/right_wheel.stl"/>
+			</geometry>
+			<material name="WheelBlack"/>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+			  <mesh filename="package://pioneer_description/meshes/p3dx_meshes/right_wheel.stl"/>
+				<!--<cylinder radius="0.092" length="0.04"/>-->
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="right_wheel_hub_joint" type="fixed">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<parent link="right_wheel"/>
+		<child link="right_hub"/>
+	</joint>
+
+	<link name="right_hub">
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/right_hubcap.stl"/>
+			</geometry>
+			<material name="HubcapYellow"/>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/right_hubcap.stl"/>
+			</geometry>
+		</collision>
+	</link>
+
+<!-- Front + Back Sonar -->
+	<link name="front_sonar">
+		<inertial>
+			<mass value="0.0001"/>	
+			<origin xyz="0 0 0"/>
+			<inertia ixx="1" ixy="0" ixz="0"
+				 iyy="1" iyz="0" izz="1"/>
+		</inertial>
+		<visual name="base_visual">
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry name="pioneer_geom">
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/front_sonar.stl"/>
+			</geometry>
+			<material name="SonarYellow"/>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/front_sonar.stl"/>
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="base_front_joint" type="fixed">
+		<origin xyz="-0.198 0 0.208" rpy="0 0 0"/>
+		<parent link="base_link"/>
+		<child link="front_sonar"/>
+	</joint>
+
+	<link name="back_sonar">
+		<inertial>
+			<mass value="0.0001"/>	
+			<origin xyz="0 0 0"/>
+			<inertia ixx="1" ixy="0" ixz="0"
+				 iyy="1" iyz="0" izz="1"/>
+		</inertial>
+		<visual name="back_sonar_vis">
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry name="pioneer_geom">
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/back_sonar.stl"/>
+			</geometry>
+			<material name="SonarYellow"/>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://pioneer_description/meshes/p3dx_meshes/back_sonar.stl"/>
+			</geometry>
+		</collision>
+	</link>
+
+	<joint name="base_back_joint" type="fixed">
+		<origin xyz="0.109 0 0.209" rpy="0 0 0"/>
+		<parent link="base_link"/>
+		<child link="back_sonar"/>
+	</joint>
+
+  <joint name="hokuyo_joint" type="fixed">
+    <origin xyz="0 0 0.085" rpy="0 0 0"/>
+    <parent link="camera_link"/>
+    <child link="laser"/>
+  </joint>
+
+  <!-- Hokuyo Laser -->
+  <link name="laser">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://pioneer_description/meshes/hokuyo.dae"/>
+	      <!--box size="0.05 0.05 0.071"/-->
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://pioneer_description/meshes/hokuyo.dae"/>
+      </geometry>
+    </visual>
+
+    <inertial>
+      <mass value="1e-5" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+  </link>
+  
+  <joint name="camera_joint" type="fixed">
+    <origin xyz="0.17 0 0.0255" rpy="0 0 0"/>
+    <parent link="top_plate"/>
+    <child link="camera_link"/>
+  </joint>
+
+  <!-- Camera -->
+  <link name="camera_link">
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+	      <box size="0.05 0.07 0.10"/>
+      </geometry>
+    </collision>
+
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+      	<box size="0.05 0.07 0.10"/>
+      </geometry>
+      <material name="CameraGreen"/>
+    </visual>
+
+    <inertial>
+      <mass value="1e-5" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+    </inertial>
+  </link>
+  
+  <!-- START: Not sure if I need this, may allow for rosservice calls to gazebo joint manager -->
+  <transmission name="tran1">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="base_left_wheel_joint">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor1">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <transmission name="tran2">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="base_right_wheel_joint">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="motor2">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <!-- END: Not sure if I need this -->
+
+</robot>

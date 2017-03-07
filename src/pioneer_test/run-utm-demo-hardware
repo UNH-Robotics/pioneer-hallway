@@ -1,0 +1,39 @@
+#!/bin/bash
+ 
+my_pid=$$
+echo "My process ID is $my_pid"
+
+export ROBOT_NAME="pioneer2"
+
+#echo "Launching roscore..."
+#roscore &
+#pid=$!
+#sleep 5s
+
+#echo "Connecting to RosAria..."
+#rosrun rosaria RosAria &
+#pid="$! $pid"
+#sleep 3s
+
+echo "Launching sensors..."
+roslaunch pioneer_test pioneer_sensors.launch &
+pid="$! $pid"
+
+sleep 3s
+
+echo "Launching map server..."
+sleep 5s
+roslaunch nav_bundle map_server_utm_demo.launch map_name:=utm_hardware_demo5 &
+pid="$pid $!"
+
+echo "Loading robot parameters..."
+roslaunch pioneer_test utm_traffic_description.launch
+
+echo "Launching robot navigation packages..."
+namespace=($ROBOT_NAME)
+roslaunch nav_bundle single_navigation_utm_traffic_demo.launch robot_name:=${namespace[0]} x:="$(rosparam get /${namespace[0]}/x)" y:="$(rosparam get /${namespace[0]}/y)" yaw:="$(rosparam get /${namespace[0]}/a)" &
+pid=$!
+
+trap "echo Killing all processes.; kill -2 TERM $pid; exit" SIGINT SIGTERM
+
+sleep 24h

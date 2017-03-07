@@ -1,0 +1,7 @@
+<launch>
+	<!-- Robot controller parameters -->
+  <node pkg="pioneer_ros" type="pioneer_pid_controller" name="pioneer_ros">
+  	<rosparam file="$(find pioneer_ros)/pioneer_controller_params.yaml" command="load"/>
+    <!--  NOTE: Use pioneer_controller_spin_recover.launch for turn_robot_around.py functionality	-->
+  </node>
+</launch>

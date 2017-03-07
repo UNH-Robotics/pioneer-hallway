@@ -1,0 +1,36 @@
+digraph G {
+"pioneer1/base_link" -> "pioneer1/left_wheel"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 153.874 Hz\nMost recent transform: 4393.607 ( 0.007 sec old)\nBuffer length: 2.801 sec\n"];
+"pioneer1/odom" -> "pioneer1/base_link"[label="Broadcaster: /gazebo\nAverage rate: 100.357 Hz\nMost recent transform: 4393.606 ( 0.008 sec old)\nBuffer length: 2.800 sec\n"];
+"pioneer1/base_link" -> "pioneer1/right_wheel"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 153.874 Hz\nMost recent transform: 4393.607 ( 0.007 sec old)\nBuffer length: 2.801 sec\n"];
+"map" -> "pioneer1/odom"[label="Broadcaster: /pioneer1/amcl\nAverage rate: 35.392 Hz\nMost recent transform: 4394.573 ( -0.959 sec old)\nBuffer length: 2.769 sec\n"];
+"pioneer2/odom" -> "pioneer2/base_link"[label="Broadcaster: /gazebo\nAverage rate: 100.357 Hz\nMost recent transform: 4393.610 ( 0.004 sec old)\nBuffer length: 2.800 sec\n"];
+"map" -> "pioneer2/odom"[label="Broadcaster: /pioneer2/amcl\nAverage rate: 40.087 Hz\nMost recent transform: 4394.588 ( -0.974 sec old)\nBuffer length: 2.769 sec\n"];
+"pioneer2/base_link" -> "pioneer2/right_wheel"[label="Broadcaster: /gazebo\nAverage rate: 149.589 Hz\nMost recent transform: 4393.611 ( 0.003 sec old)\nBuffer length: 2.801 sec\n"];
+"pioneer2/base_link" -> "pioneer2/left_wheel"[label="Broadcaster: /gazebo\nAverage rate: 149.589 Hz\nMost recent transform: 4393.611 ( 0.003 sec old)\nBuffer length: 2.801 sec\n"];
+"pioneer1/base_link" -> "pioneer1/back_sonar"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/base_link" -> "pioneer1/front_sonar"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/base_link" -> "pioneer1/top_plate"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/top_plate" -> "pioneer1/camera_link"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/center_wheel" -> "pioneer1/center_hubcap"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/swivel" -> "pioneer1/center_wheel"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 10.363 Hz\nMost recent transform: 4393.579 ( 0.035 sec old)\nBuffer length: 2.702 sec\n"];
+"pioneer1/base_link" -> "pioneer1/chassis"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/camera_link" -> "pioneer1/hokuyo_link"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/left_wheel" -> "pioneer1/left_hub"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/right_wheel" -> "pioneer1/right_hub"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.599 ( 0.015 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/base_link" -> "pioneer2/back_sonar"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/base_link" -> "pioneer2/front_sonar"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/base_link" -> "pioneer2/top_plate"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/top_plate" -> "pioneer2/camera_link"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/center_wheel" -> "pioneer2/center_hubcap"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/swivel" -> "pioneer2/center_wheel"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 9.993 Hz\nMost recent transform: 4393.579 ( 0.035 sec old)\nBuffer length: 2.702 sec\n"];
+"pioneer2/base_link" -> "pioneer2/chassis"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/camera_link" -> "pioneer2/hokuyo_link"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/left_wheel" -> "pioneer2/left_hub"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer2/right_wheel" -> "pioneer2/right_hub"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 50.360 Hz\nMost recent transform: 4393.601 ( 0.013 sec old)\nBuffer length: 2.780 sec\n"];
+"pioneer1/base_link" -> "pioneer1/swivel"[label="Broadcaster: /pioneer1/robot_state_publisher\nAverage rate: 10.363 Hz\nMost recent transform: 4393.579 ( 0.035 sec old)\nBuffer length: 2.702 sec\n"];
+"pioneer2/base_link" -> "pioneer2/swivel"[label="Broadcaster: /pioneer2/robot_state_publisher\nAverage rate: 9.993 Hz\nMost recent transform: 4393.579 ( 0.035 sec old)\nBuffer length: 2.702 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 4393.614"[ shape=plaintext ] ;
+ }->"map";
+}

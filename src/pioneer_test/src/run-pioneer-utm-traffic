@@ -1,0 +1,25 @@
+#!/bin/bash
+ 
+my_pid=$$
+echo "My process ID is $my_pid"
+
+export ROBOT_NAME="pioneer"
+
+echo "Pulling advertised topics..."
+rosrun rocon_flip pull-from-hub-utm
+
+echo "Flipping topics from local machine..."
+rosrun rocon_flip flip-from-remote-utm
+
+echo "Loading robot parameters..."
+roslaunch pioneer_test utm_traffic_description.launch
+rosparam set /use_sim_time true
+
+echo "Launching robot navigation packages..."
+namespace=($ROBOT_NAME)
+roslaunch nav_bundle single_navigation_utm_traffic.launch robot_name:=${namespace[0]} x:="$(rosparam get /${namespace[0]}/x)" y:="$(rosparam get /${namespace[0]}/y)" yaw:="$(rosparam get /${namespace[0]}/a)" &
+pid=$!
+
+trap "echo Killing all processes.; kill -2 TERM $pid; exit" SIGINT SIGTERM
+
+sleep 24h

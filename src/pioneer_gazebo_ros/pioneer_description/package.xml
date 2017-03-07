@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package>
+  <name>pioneer_description</name>
+  <version>0.0.0</version>
+  <description>The pioneer_description package</description>
+
+  <maintainer email="jenjen.chung88@gmail.com">Jen Jen Chung</maintainer>
+
+  <license>BSD</license>
+
+  <author email="jenjen.chung88@gmail.com">Jen Jen Chung</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>

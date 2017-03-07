@@ -1,0 +1,43 @@
+<launch>
+  <!-- No namespace here as we will share this description. 
+       Access with slash at the beginning -->
+  <!-- Load the URDF into the ROS Parameter Server -->
+  <param name="robot_description"
+	 command="$(find xacro)/xacro.py '$(find pioneer_description)/urdf/pioneer3dx.xacro'" />
+
+  <!-- BEGIN PIONEER 1-->
+  <group ns="pioneer1">
+    <param name="tf_prefix" value="pioneer1" />
+    <include file="$(find pioneer_description)/launch/one_pioneer.launch" >
+      <arg name="init_pose" value="-x 0 -y 0 -z 0" />
+      <arg name="robot_name"  value="pioneer1" />
+    </include>
+  </group>
+
+  <!-- BEGIN PIONEER 2-->
+  <group ns="pioneer2">
+    <param name="tf_prefix" value="pioneer2" />
+    <include file="$(find pioneer_description)/launch/one_pioneer.launch" >
+      <arg name="init_pose" value="-x 0 -y -5 -z 0" />
+      <arg name="robot_name"  value="pioneer2" />
+    </include>
+  </group>
+
+  <!-- BEGIN PIONEER 3-->
+  <group ns="pioneer3">
+    <param name="tf_prefix" value="pioneer3" />
+    <include file="$(find pioneer_description)/launch/one_pioneer.launch" >
+      <arg name="init_pose" value="-x 7 -y 0 -z 0 -Y 1.57" />
+      <arg name="robot_name"  value="pioneer3" />
+    </include>
+  </group>
+
+  <!-- BEGIN PIONEER 4-->
+  <group ns="pioneer4">
+    <param name="tf_prefix" value="pioneer4" />
+    <include file="$(find pioneer_description)/launch/one_pioneer.launch" >
+      <arg name="init_pose" value="-x 21 -y -10 -z 0 -Y 3.15" />
+      <arg name="robot_name"  value="pioneer4" />
+    </include>
+  </group>
+</launch>

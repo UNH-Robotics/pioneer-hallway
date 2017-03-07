@@ -1,0 +1,12 @@
+<launch>
+  <arg name="name"/>
+  <arg name="pose"/>
+  
+  <group ns="$(arg name)">
+    <param name="tf_prefix" value="$(arg name)" />
+    <include file="$(find pioneer_description)/launch/one_pioneer.launch" >
+      <arg name="robot_name"  value="$(arg name)" />
+      <arg name="init_pose" value="$(arg pose)"/>
+    </include>
+  </group>
+</launch>

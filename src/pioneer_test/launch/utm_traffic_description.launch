@@ -1,0 +1,4 @@
+<launch>
+  <!-- Load initial position parameter file -->
+  <rosparam file="$(find pioneer_test)/launch/pioneer_utm_traffic.yaml" command="load"/>
+</launch>

@@ -1,0 +1,60 @@
+#!/bin/bash
+
+PATH=$(echo $PATH | sed 's|/home/aadi-workstation/anaconda3/bin:||g')
+export PATH=$PATH
+ 
+my_pid=$$
+echo "My process ID is $my_pid"
+
+echo "Launching roscore..."
+roscore &
+pid=$!
+
+sleep 5s
+echo "Launching Gazebo..."
+sleep 1s
+roslaunch pioneer_gazebo rags_traffic_world.launch &
+pid="$pid $!"
+
+sleep 5s
+echo "Loading initialisation parameters..."
+sleep 1s
+roslaunch pioneer_description rags_description.launch
+roslaunch rags_ros rags_planner_config.launch
+
+sleep 5s
+echo "Launching Pioneers in Gazebo stack..."
+for i in `seq 1 1`;
+do
+  roslaunch pioneer_description generic_pioneer.launch name:=pioneer$i pose:="-x $(rosparam get /pioneer$i/x) -y $(rosparam get /pioneer$i/y) -Y $(rosparam get /pioneer$i/a)" &
+  pid="$pid $!"
+  sleep 2s
+done
+
+sleep 5s
+echo "Launching map server..."
+roslaunch nav_bundle map_server.launch map_name:=rags_traffic &
+pid="$pid $!"
+
+sleep 2s
+echo "Launching RAGS navigation stack..."
+for i in `seq 1 1`;
+do
+  roslaunch nav_bundle single_navigation_rags.launch robot_name:=pioneer$i x:="$(rosparam get /pioneer$i/x)" y:="$(rosparam get /pioneer$i/y)" yaw:="$(rosparam get /pioneer$i/a)" &
+  pid="$pid $!"
+  
+  sleep 2s
+  
+  roslaunch rags_ros generic_rags_planner.launch robot_name:=pioneer$i &
+  pid="$pid $!"
+  
+  sleep 5s
+done
+
+echo "Launching rviz..."
+roslaunch pioneer_description rags_traffic_rviz.launch &
+pid="$pid $!"
+
+trap "echo Killing all processes.; kill -2 TERM $pid; exit" SIGINT SIGTERM
+
+sleep 24h

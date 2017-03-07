@@ -1,0 +1,23 @@
+<launch>
+  <arg name="robot_name"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="yaw" default="0"/>
+  
+  <!-- Make sure initial pose matches $(find pioneer_description)/launch/pioneers.launch arg init_pose -->
+  <group ns="$(arg robot_name)">
+    <param name="tf_prefix" value="$(arg robot_name)" />
+    <param name="amcl/initial_pose_x" value="$(arg x)" />
+    <param name="amcl/initial_pose_y" value="$(arg y)" />
+    <param name="amcl/initial_pose_a" value="$(arg yaw)" />
+    <include file="$(find nav_bundle)/launch/localisation_launcher.launch">
+      <arg name="robot_name" value="$(arg robot_name)" />
+    </include>
+    <include file="$(find scout_service)/move_base_global_service.launch"/>
+    <node pkg="simple_navigation_goals" type="map_navigation_client" name="map_goal_client" output="screen"/>
+    <include file="$(find pioneer_ros)/launch/pioneer_controller_spin_recover.launch"/>
+<!--    <include file="$(find scout_service)/launch/scout.launch">-->
+<!--      <arg name="robot_name" value="$(arg robot_name)" />-->
+<!--    </include>-->
+  </group>
+</launch>
