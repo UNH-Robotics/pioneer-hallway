@@ -34,7 +34,7 @@ def teleop():
 	global cancelButton
 	enableButton = rospy.get_param('enableButton', 0)
 	turboButton = rospy.get_param('turboButton', 5)
-	cancelButton = rospy.get_param('turboButton', 1)
+	cancelButton = rospy.get_param('cancelButton', 1)
 	twistPub = rospy.Publisher('RosAria/cmd_vel', Twist, queue_size=1)
 	actionPub = rospy.Publisher('move_base/cancel', GoalID, queue_size=1)
 	rospy.init_node('pioneer_teleop', anonymous=True)
