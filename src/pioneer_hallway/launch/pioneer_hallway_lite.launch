@@ -1,0 +1,17 @@
+<launch>
+	<!-- 
+		Arguments for the launch file.
+	 -->
+	 
+	<!-- rosaria node -->
+	<include file="$(find rosaria)/launch/pioneer.launch"/>
+	
+	<!-- start nodes for pioneer sensors -->
+	<include file="$(find pioneer_test)/launch/rtp_pioneer_sensors.launch"/>
+	
+	<!-- move_base node -->
+	<include file="$(find pioneer_2dnav)/rtp_move_base.launch"/>
+
+	<!-- controller node -->
+	<include file="$(find pioneer_test)/launch/pioneer_controller_spin_recover.launch"/>	
+</launch>

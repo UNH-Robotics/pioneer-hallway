@@ -1,9 +1,26 @@
 <launch>
-	<include file="$(find teleop_twist_joy)/launch/teleop.launch"/>
+	<!-- 
+		Arguments for the launch file. This arguments are passed to the 
+		teleop_twist_joy and  pioneer_teleop nodes
+	 -->
+	<arg name="joy_config" default="xbox" />
+	<arg name="joy_dev" default="/dev/input/js0" />
+	<arg name="config_filepath" default="$(find pioneer_teleop)/config/$(arg joy_config).config.yaml" />
+	<arg name="enableButton" default="0"/>
+	<arg name="turboButton" default="5"/>
+	<arg name="cancelButton" default="1"/>
+
+	<!-- teleop_twist_joy node -->
+	<include file="$(find teleop_twist_joy)/launch/teleop.launch">
+		<arg name="joy_config" value="$(arg joy_config)" />
+		<arg name="joy_dev" value="$(arg joy_dev)" />
+		<arg name="config_filepath" value="$(arg config_filepath)" />
+	</include>
 	
+	<!-- pioneer_teleop node -->
 	<node pkg="pioneer_teleop" type="pioneer_teleop.py" name="pioneer_teleop" output="screen">
-	  <param name="enableButton" value="0"/>
-	  <param name="turboButton" value="5"/>
-	  <param name="cancelButton" value="1"/>
+		<param name="enableButton" value="$(arg enableButton)"/>
+		<param name="turboButton" value="$(arg turboButton)"/>
+		<param name="cancelButton" value="$(arg cancelButton)"/>
 	</node>
 </launch>
