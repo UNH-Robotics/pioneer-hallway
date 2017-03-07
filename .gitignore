@@ -1,10 +1,5 @@
 devel/
 build/
 .catkin_workspace
-src/nav_bundle/
-src/pioneer_gazebo_ros/
-src/pioneer_2dnav/
 src/simple_navigation_goals/
-src/rosaria
-src/pioneer_test
 

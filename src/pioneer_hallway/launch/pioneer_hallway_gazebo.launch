@@ -1,0 +1,28 @@
+<launch>
+	<!-- 
+		Arguments for the launch file.
+	 -->
+	 <arg name="map_file" default="$(find pioneer_hallway)/maps/kings2F.yaml"/>
+	 
+	<!-- rosaria node -->
+	<include file="$(find rosaria)/launch/pioneer.launch"/>
+	
+	<!-- start nodes for pioneer sensors -->
+	<include file="$(find pioneer_test)/launch/rtp_pioneer_sensors.launch"/>
+	
+	<!-- move_base node -->
+	<include file="$(find pioneer_2dnav)/rtp_move_base.launch"/>
+
+	<!-- controller node -->
+	<include file="$(find pioneer_test)/launch/pioneer_controller_spin_recover.launch"/>
+	
+	<!-- map server -->
+	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+	
+	<!-- start amcl node -->
+	<include file="$(find nav_bundle)/launch/amcl_pioneer_hallway.launch"/>
+	
+	<!-- start rviz -->
+	<include file="$(find pioneer_description)/launch/pioneer_hallway_rviz.launch"/>
+	
+</launch>
