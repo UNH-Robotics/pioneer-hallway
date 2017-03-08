@@ -85,6 +85,41 @@ def read_primitives(filename):
 
     return primitives
 
+'''
+add by Tianyi Mar / 8 / 2017
+'''
+def read_primitives_with_duration(filename):
+    primitive_controls = set()
+    primitive_entries = {}
+
+    with open(filename) as f:
+        lines = f.readlines()
+
+    config = {
+       "action_duration":float(lines[0]),
+        "linear_velocity_divisor":float(lines[1]),
+        "angular_velocity_divisor":float(lines[2]),
+        "heading_divisor":float(lines[3]),
+    }
+
+    for line in lines[4:]:
+        elements = line.split("\t")
+        if len(elements) < 10:
+            continue
+
+        p = PrimitiveResult(*(line.split("\t")))
+        primitive_controls.add((p.name, float(p.la), float(p.wa)))
+        path = [(int(i.group(1)), int(i.group(2)))
+                for i in re.finditer("([\-0-9]+), ([\-0-9]+)", p.path)]
+
+        pentry = PrimitiveEntry(float(p.x), float(p.y), float(p.h), path)
+        primitive_entries[(p.name, int(p.vkey), int(p.wkey), int(p.hkey))] = pentry
+
+    primitives = [Primitive(i[0], i[1], i[2], config, primitive_entries) for
+                  i in primitive_controls]
+
+    return (primitives, float(lines[0]))
+
 
 
 # if __name__ == '__main__':
