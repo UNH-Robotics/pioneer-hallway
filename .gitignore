@@ -2,4 +2,3 @@ devel/
 build/
 .catkin_workspace
 src/simple_navigation_goals/
-

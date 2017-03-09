@@ -18,7 +18,7 @@ max_acceleration      = 0.3             # max acceleration in meters per second
 lv_states             = [action_duration * i for i in [0, 0.3, 0.6, 0.9, 1.2]]
 heading_states        = [i * pi/8 for i in range(15)]
 
-acceleration_controls = [0.3 * action_duration, 0, 0.3 * action_duration]
+acceleration_controls = [-0.3 * action_duration, 0, 0.3 * action_duration]
 av_controls           = [-2 * pi/4, -pi/4, 0, pi/4, 2 * pi/4]
 av_bounds             = [-2 * pi/4, 2 * pi/4]
 lv_bounds             = [0, 1.2 * action_duration]
