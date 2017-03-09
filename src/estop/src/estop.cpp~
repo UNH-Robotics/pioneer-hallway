@@ -1,0 +1,68 @@
+#include <vector>
+
+#include <nav_msgs/Odometry.h>
+#include <sensor_msgs/LaserScan.h>
+#include <geometry_msgs/Polygon.h>
+#include <p2os_msgs/SonarArray.h>
+#include <p2os_msgs/MotorState.h>
+#include <tf/transform_listener.h>
+/* > 0 p2 is left
+ * = 0 p2 is on line
+ * < 0 p2 is right
+ */
+int isLeft(geometry_msgs::Point& p0,
+	    geometry_msgs::Point& p1,
+	    geometry_msgs::Point& p2) {
+  return ((p1.x - p0.x) * (p2.y - p0.y) -
+	  (p2.x - p0.x) * (p1.y - p0.y));
+}
+
+
+bool pointInPoly(geometry_msgs::Point& pt, geometry_msgs::Polygon& footprint) {
+  auto points = footprint.points;
+  int wn;
+  for(unsigned int i = 0; i <= points.size(); i++) {
+    auto p0 = points[i % points.size()];
+    auto p1 = points[(i + 1) % points.size()];
+    if(p0.y <= pt.y) {
+      if(p1.y > pt.y) {
+if(isLeft(p0, p1, pt) > 0) {
+	    ++wn;
+	  }
+      }
+    } else {
+	if(points[index1].y <= pt.y) {
+	  if(isLeft(points[index], points[index1], pt) < 0) {
+	    --wn;
+	  }
+	}
+    }
+  }
+  return wn != 0;
+}
+
+void odomListener(const nav_msgs::Odometry::ConstPtr& msg) {
+
+}
+
+void sonarListener(const p2os_msgs::SonarArray::ConstPtr& msg) {
+
+}
+
+void laserListener(const sensor_msgs::LaserScan::ConstPtr& msg) {
+
+}
+
+int main(int argc, char* argv[]) {
+  ros::init(argc, argv, "estop_node");
+  ros::NodeHandle n;
+  ros::Subscriber odomSubscriber = n.subscribe("odom", 1, odomListener);
+  ros::Subscriber sonarSubscriber = n.subscribe("sonar", 1, sonarListener);
+  ros::Subscriber laserSubcriber = n.subscribe("scan", 1, laserListener);
+
+  ros::Publisher motorStatePublisher = n.advertise<p2os_msgs::MotorState>("cmd_motor_state", 100);
+
+  ros::spin();
+
+  return 0;
+}
