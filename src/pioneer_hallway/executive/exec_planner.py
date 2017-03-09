@@ -121,7 +121,7 @@ def send_msg_to_planner(master_clock, p, nbsr):
         msg = msg + str(obst.x) + ' ' + str(obst.y) + '\n'
     msg = msg + "END\n"
     p.stdin.write(msg)
-    time.sleep(0.25)
+    time.sleep(0.5)
     # have to wait for the process to respond
     try:
         return (time.time(), nbsr.readline(0.25))
@@ -145,13 +145,13 @@ if __name__ == '__main__':
     master_clock = time.time()
     cur_clock = time.time()
     try:
-        while ((time.time() - cur_clock) < 0.3):
-            rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
-            # send the msg to the planner store the time it took
+        while ((time.time() - cur_clock) < 0.250):
+           # send the msg to the planner store the time it took
             cur_clock, action = send_msg_to_planner(master_clock, planner, nbsr)
             exec_control_pub(action)
             update_cur(action)
-            time.sleep((time.time() - cur_clock))
+            rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
+            #time.sleep((time.time() - cur_clock))
             master_clock = cur_clock
         raise rospy.ROSException("ESTOP")
     except (rospy.ROSInterruptException, rospy.ROSException):
