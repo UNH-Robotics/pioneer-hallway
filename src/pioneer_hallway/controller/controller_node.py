@@ -24,6 +24,7 @@ currentTwist = Twist()
 
 
 def executive_callback(data):
+    global actionQueue
     rospy.loginfo(rospy.get_caller_id() + 'Executive give me the motion: %s',
                   data.data)
     actionQueue.append(data.data)
@@ -33,8 +34,14 @@ def executive_listener():
     rospy.spin()
 
 def pose_callback(data):
-    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: linear: ',
-                  data.twist.linear, ',  anglar: ', data.twist.angular)
+    global currentTwist
+    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+                  "linear x: %.2f" % data.twist.linear.x + "\n" + 
+                  "linear y: %.2f" % data.twist.linear.y+"\n"+
+                  "linear z: %.2f" % data.twist.linear.z+"\n"+
+                  "angular x: %.2f" % data.twist.angular.x+"\n"+
+                  "angular y: %.2f" % data.twist.angular.y+"\n"+
+                  "angular z: %.2f" % data.twist.angular.z+"\n")
     currentTwist = data.twist
 
 def pose_listener():
@@ -42,6 +49,7 @@ def pose_listener():
     rospy.spin()
 
 def move():
+    global actionQueue
     #here,we publish actions to the topic 'cmd_vel'
     pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     speedListener =  tf.TransformListener()
@@ -52,17 +60,25 @@ def move():
             motionStr = actionQueue.pop(0)
             currentMotion = motions[motionStr]
             motion = currentTwist
-            motion.linear[0] += currentMotion[0] * duration
-            motion.angular[2] += currentMotion[1] * duration
-            rospy.loginfo("controller publish action: " + motionStr)
+            motion.linear.x += currentMotion[0] * duration
+            motion.angular.z += currentMotion[1] * duration
+            rospy.loginfo("controller publish action: \n" + 
+                          "linear x: %.2f" % (motion.linear.x) + "\n" + 
+                          "linear y: %.2f" % motion.linear.y+"\n"+
+                          "linear z: %.2f" % motion.linear.z+"\n"+
+                          "angular x: %.2f" % motion.angular.x+"\n"+
+                          "angular y: %.2f" % motion.angular.y+"\n"+
+                          "angular z: %.2f" % motion.angular.z+"\n" +
+                          "duration: " + str(duration))
             pub.publish(motion)
-            rospy.Duration(duration).sleep();
+            rospy.sleep(rospy.Duration(duration))
         motion = Twist(Vector3(0, 0, 0), Vector3(0, 0, 0))
         rospy.logerr("Action Queue is empty!")
         pub.publish(motion)
         rate.sleep()
 
 def init_motions():
+    global duration
     (primitives, duration) = read_primitives_with_duration("../../../doc/motionPrimitive/primitives.txt")
     dupMotions = [[p.name, p.va, p.wa] for p in primitives]
     dupMotions.sort()
