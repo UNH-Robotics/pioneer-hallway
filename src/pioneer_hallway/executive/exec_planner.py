@@ -9,8 +9,6 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from nbstreamreader import NonBlockingStreamReader as NBSR
 sys.path.insert(0, "../../../doc/motionPrimitive/")
-sys.path.insert(0, "../src/")
-import Lib
 from primutils import Primitive, read_primitives
 from pioneer_hallway.srv import *
 
