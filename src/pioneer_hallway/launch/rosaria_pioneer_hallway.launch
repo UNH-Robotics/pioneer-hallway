@@ -1,0 +1,8 @@
+<launch>
+	<node pkg="rosaria" type="RosAria" name="RosAria">
+		<param name="publish_aria_lasers" value="true"/>
+		<param name="TicksMM" value="175"/>
+		<param name="RevCount" value="14750"/>
+		<param name="DriftFactor" value="-20"/>
+	</node>
+</launch>

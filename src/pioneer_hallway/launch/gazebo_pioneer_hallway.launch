@@ -1,0 +1,15 @@
+<launch>
+	<!-- start gazebo -->
+	<include file="$(find pioneer_hallway)/launch/gazebo_small_world.launch"/> 
+	 
+	<!-- controller node -->
+	<include file="$(find pioneer_ros)/launch/pioneer_controller.launch"/>
+	
+	<!-- start amcl node -->
+	<node pkg="gmapping" type="slam_gmapping" name="gmapping">
+	  <remap from="scan" to="base_scan"/> 
+	</node>
+	
+	<!-- start rviz -->
+	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch"/>
+</launch>

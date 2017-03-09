@@ -1,0 +1,15 @@
+<launch>
+  <!-- SLAM mapping nodes -->
+  <node pkg="gmapping" type="slam_gmapping" name="gmapping">
+	  <remap from="scan" to="RosAria/lms5XX_1_laserscan"/>
+	  <remap from="RosAria/lms5XX_1_laserscan" to="base_scan"/>
+  </node>
+  
+  <!-- Include move base launch file -->
+  <!-- Use with Pioneer Gazebo simulation and Pioneer3dx robot platform -->
+  <include file="$(find pioneer_hallway)/launch/2dnav_pioneer_hallway.launch"/>
+	
+  <!-- Move base clients for waypoint navigation -->
+  <node pkg="simple_navigation_goals" type="base_link_navigation_client" name="base_link_goal_client" output="screen"/>
+  <node pkg="simple_navigation_goals" type="map_navigation_client" name="map_goal_client" output="screen"/>
+</launch>
