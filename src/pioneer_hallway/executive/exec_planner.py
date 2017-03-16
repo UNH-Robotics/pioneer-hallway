@@ -129,7 +129,7 @@ def send_msg_to_planner(master_clock, p, nbsr):
 if __name__ == '__main__':
     # wait for services before starting up ...
     rospy.loginfo("Waiting for services before starting up ...")
-    rospy.wait_for_service('get_obsticles')
+    #rospy.wait_for_service('get_obsticles')
     # fork and create a child subprocess of the planner
     rospy.loginfo("Running Planner with 3s startup time...")
     planner = subprocess.Popen("./planner.sh -timeout 250",
