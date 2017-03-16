@@ -42,8 +42,9 @@ class Primitive(object):
         :param state_h: Current heading (in radians) of robot
         :return: tuple (x, y, heading)
         """
-        v = state_v + self.va * 0.5
-        w = state_w + self.wa * 0.5
+        ad = self.config["action_duration"]
+        v = state_v * ad + self.va * 0.5
+        w = state_w * ad + self.wa * 0.5
         dx = x + (v * math.cos(w)) / 0.05
         dy = y + (v * math.sin(w)) / 0.05
         h = state_h + w
