@@ -16,7 +16,7 @@ max_acceleration      = 0.3             # max acceleration in meters per second
 
 # the following options are for fine-tuning the discretization of our states
 lv_states             = [action_duration * i for i in [0, 0.3, 0.6, 0.9, 1.2]]
-heading_states        = [i * pi/8 for i in range(15)]
+heading_states        = [i * pi/8 for i in range(16)]
 
 acceleration_controls = [-0.3 * action_duration, 0, 0.3 * action_duration]
 av_controls           = [-2 * pi/4, -pi/4, 0, pi/4, 2 * pi/4]
@@ -66,9 +66,10 @@ class Primitive(object):
 
         # print(heading)
         return ActionResult(
-                            int(lv / (0.3 * action_duration)),
-                            int(w / (pi / 4)),
-                            int(heading / (pi / 8)),
+                            round(lv / (0.3 * action_duration)),
+                            round(w / (pi / 4)),
+                            round(heading / (pi / 8)),
+            # int(heading / (pi / 8)),
                             x / map_scale, y / map_scale,
                             cur_av, collision_cells)
 
