@@ -2,6 +2,7 @@
 from collections import namedtuple
 from subprocess import Popen, PIPE, check_call
 import time
+import re
 import sys
 import rospy
 import math
@@ -12,9 +13,6 @@ from nbstreamreader import NonBlockingStreamReader as NBSR
 sys.path.insert(0, "../../../doc/motionPrimitive/")
 from primutils import Primitive, read_primitives
 from pioneer_hallway.srv import *
-
-goal_template = "GOAL\n{}"
-state_template = "STATE\n{} {}\nEND\n"
 
 
 '''
@@ -29,6 +27,8 @@ primitives = read_primitives(sys.argv[1])
 
 pose = PoseWithCovarianceStamped()
 vels = (0,0)
+
+goal_is_set = True
 
 ''' 
  TODO: find out the msg type and read
@@ -83,7 +83,6 @@ def toEuler(orient):
     return euler[2]
   return None
 
- 
 '''
  gets the obstacles from 'get_obsticle' service
 '''
@@ -94,9 +93,8 @@ def obstacles(dt, steps):
     except rospy.ServiceException, e:
         rospy.logerr("Service call has failed %s"%e)
 
-
 def exec_control_pub(action):
-    rospy.loginfo(action)
+    rospy.loginfo("ecp: " + action)
     pub.publish(action)
 
 '''
@@ -105,8 +103,8 @@ def exec_control_pub(action):
  and/or when we look up the new state
 '''
 CurrentState = namedtuple("CurrentState", "x y lin rot head")
-CurrentState.x = 1.0
-CurrentState.y = 1.0
+CurrentState.x = 1024
+CurrentState.y = 2777
 CurrentState.lin = 0.0
 CurrentState.rot = 0.0
 CurrentState.head = 0.0
@@ -122,8 +120,15 @@ def set_cur(x, y, lin, rot, head):
     CurrentState.rot = rot
     CurrentState.head = head
 
+def update_lcur(msg):
+  state = msg[1].rstrip().split(' ',4)
+  print(state)
+  set_cur(state[0],state[1],state[2],state[3],state[4])
+  rospy.loginfo("new updated lstate: " + print_cur_state())
+
 def update_cur(action):
     str_index = action.rstrip()
+    rospy.loginfo("updating state with action: " + str_index)
     index_action = int(str_index[1:])
     cur_primitive = primitives[index_action]
     xVel = vels[0]
@@ -133,30 +138,62 @@ def update_cur(action):
     heading = toEuler(pose.pose.pose.orientation)
     newState = cur_primitive.apply(x, y, xVel, rotVel, heading)
     set_cur(newState[0], newState[1], vels[0] , vels[1], newState[2])
-    rospy.loginfo(print_cur_state())
+    rospy.loginfo("new updated state: " + print_cur_state())
     
 def print_cur_state():
     return str(CurrentState.x) + ' ' + str(CurrentState.y) + \
         ' ' + str(CurrentState.lin) + ' ' + str(CurrentState.rot) + ' ' + str(CurrentState.head)
 
+    
+def print_cur_cstate():
+    return str(CurrentState.x) + ',' + str(CurrentState.y) + \
+        ',' + str(CurrentState.lin) + ',' + str(CurrentState.rot) + ',' + str(CurrentState.head)
 
-def send_msg_to_planner(master_clock, p, nbsr):
+
+def set_new_goal(p, nbsr, x, y):
+  out = send_goal_to_planner(p, nbsr, x, y)
+  while out == None:
+    time.sleep(0.25)
+    rospy.logwarn("waiting on planner to update goal")
+    out = nbsr.readline(0.25)
+  rospy.loginfo("planner fired up and ready to go")
+  goal_is_set = True
+
+def send_goal_to_planner(p, nbsr, x, y):
+  goal_is_set = False
+  msg = "GOAL\n" + str(x) + " " + str(y) + "\n"
+  rospy.loginfo("sending new goal to plan towards: " + msg)
+  p.stdin.write(msg)
+  try:
+    out = nbsr.readline(0.20)
+    rospy.loginfo("from planner: " + out + "\n")
+    if out == "READY":
+      return out
+    else:
+      rospy.logwarn("planner needs more time to set up")
+      return None
+  except:
+    rospy.logwarn("planner needs more time to set up")
+    return None
+
+def send_msg_to_planner(p, nbsr):
     msg = "STATE\n" + str(int(time.time() * 1000) + 250) + ' ' + print_cur_state() + '\n'
     for obst in ObstacleDb:
         msg = msg + str(obst.x) + ' ' + str(obst.y) + '\n'
     msg = msg + "END\n"
-    rospy.loginfo(msg)
+    rospy.loginfo("sending new state to plan to: " + msg)
     p.stdin.write(msg)
-    # time.sleep(0.5)
+    time.sleep(0.25)
     # have to wait for the process to respond
     try:
         (t,a) = (time.time(), nbsr.readline(0.20))
+        (t2,b) = (t, nbsr.readline(0.20))
+        rospy.loginfo("plan msg: " + a + "\n") 
+        rospy.loginfo("plan action: " + b + "\n")
         if a == None:
-          rospy.loginfo(a + "\n") 
           return (t, "a7")
         else:
-          rospy.loginfo(a + "\n")
-          return (t,a)
+          return (t,b.split(' ',1))
     except:
         rospy.logerr("planner did not respond assuming no action")
         return (time.time(), "a7")
@@ -174,18 +211,29 @@ if __name__ == '__main__':
     nbsr = NBSR(planner.stdout)
     # give time for the planner to initialize
     # the master clock for the planner
+    set_new_goal(planner, nbsr, 990, 2890) 
     master_clock = time.time()
     cur_clock = time.time()
     try:
         while ((time.time() - cur_clock) < 0.250):
            # send the msg to the planner store the time it took
-            cur_clock, action = send_msg_to_planner(master_clock, planner, nbsr)
-            exec_control_pub(action)
-            update_cur(action)
+            cur_clock, action = send_msg_to_planner(planner, nbsr)
+            cont_msg = action[0] + "," + print_cur_cstate() + "," + str(int(time.time() * 1000) + 250) + "\n"
+            exec_control_pub(cont_msg)
+            update_lcur(action)
             rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             #time.sleep((time.time() - cur_clock))
             master_clock = cur_clock
         raise rospy.ROSException("ESTOP")
     except (rospy.ROSInterruptException, rospy.ROSException):
-        rospy.logerr("ESTOP")
-        pass
+      rospy.logerr("ESTOP")
+
+
+
+
+
+
+
+
+
+
