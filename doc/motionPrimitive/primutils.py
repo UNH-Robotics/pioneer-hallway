@@ -27,9 +27,9 @@ class Primitive(object):
         :param state_h: state's heading (in radians)
         :return: tuple of (x y h path)
         """
-        vkey = int(state_v / self.config["linear_velocity_divisor"])
-        wkey = int(state_w / self.config["angular_velocity_divisor"])
-        hkey = int(state_h / self.config["heading_divisor"])
+        vkey = round(state_v / self.config["linear_velocity_divisor"])
+        wkey = round(state_w / self.config["angular_velocity_divisor"])
+        hkey = round(state_h / self.config["heading_divisor"])
         return self.entries.get((self.name, vkey, wkey, hkey), None)
 
 

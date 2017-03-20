@@ -15,8 +15,12 @@ max_linear_velocity   = 1.2             # max linear velocity in meters per seco
 max_acceleration      = 0.3             # max acceleration in meters per second
 
 # the following options are for fine-tuning the discretization of our states
-lv_states             = [action_duration * i for i in [0, 0.3, 0.6, 0.9, 1.2]]
-heading_states        = [i * pi/8 for i in range(15)]
+lv_states             = [action_duration * i for i in
+                         [0, 0.075, 0.15, 0.25, 0.3,
+                          0.375, 0.45, 0.525, 0.6,
+                          0.675, 0.75, 0.825, 0.9,
+                          0.975, 1.05, 1.125, 1.2]]
+heading_states        = [i * pi/8 for i in range(17)]
 
 acceleration_controls = [-0.3 * action_duration, 0, 0.3 * action_duration]
 av_controls           = [-2 * pi/4, -pi/4, 0, pi/4, 2 * pi/4]
@@ -41,7 +45,7 @@ class Primitive(object):
 
     def generate_states(self):
         for lv in lv_states:
-            if lv_bounds[0] <= lv + self.accel <= lv_bounds[1]:
+            if lv_bounds[0] <= lv + self.accel * action_duration <= lv_bounds[1]:
                 for heading in heading_states:
                     for w in av_controls:
                         if av_bounds[0] <= w + self.av <= av_bounds[1]:
@@ -64,13 +68,19 @@ class Primitive(object):
             y = cur_lv * sin(cur_av)
             collision_cells.add((int(x / map_scale), int(y / map_scale)))
 
-        # print(heading)
+        new_heading = heading + w + self.av * 0.5
+        if new_heading < 0:
+            new_heading = 2 * pi + new_heading
+        elif new_heading > 2 * pi:
+            new_heading = new_heading - 2 * pi
+
         return ActionResult(
-                            int(lv / (0.3 * action_duration)),
-                            int(w / (pi / 4)),
-                            int(heading / (pi / 8)),
+                            round(lv / (0.075 * action_duration)),
+                            round(w / (pi / 4)),
+                            round(heading / (pi / 8)),
+            # int(heading / (pi / 8)),
                             x / map_scale, y / map_scale,
-                            cur_av, collision_cells)
+                            new_heading, collision_cells)
 
     def __str__(self):
         out = ""
@@ -112,7 +122,7 @@ if __name__ == '__main__':
 
 
     print(0.25)                         # action duration
-    print(0.3)                          # linear velocity divisor
+    print(0.075)                          # linear velocity divisor
     print(pi/4)                         # angular velocity divisor
     print(pi/8)                         # heading divisor
     for p in primitives:
