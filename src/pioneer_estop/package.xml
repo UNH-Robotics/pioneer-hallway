@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package>
+  <name>pioneer_estop</name>
+  <version>0.0.1</version>
+  <description>Emergency stop node for Pioneer 3DX</description>
+
+  <maintainer email="erp48@cs.unh.edu">Estuardo Carpio</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_srvs</build_depend>
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>std_srvs</run_depend>
+
+  <export>
+  </export>
+</package>
