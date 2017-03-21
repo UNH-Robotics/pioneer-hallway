@@ -5,7 +5,7 @@ from pioneer_hallway.msg import *
 from sensor_msgs.msg import LaserScan
 from nav_msgs.srv import GetMap
 from pioneer_hallway.srv import GetObsticles
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import *
 import numpy as np
 
@@ -30,6 +30,7 @@ class Obsticle:
 
     H = np.array([ 1, 1, 0, 0  ])
     def __init__(self, x, y, time, cov):
+        print("Creating Obticle", x, y, time, cov)
         self.state = np.array([ x, y, 0, 0 ])
         self.cov = np.diag([cov, cov, cov, cov])
         self.lasttime = time
@@ -38,25 +39,32 @@ class Obsticle:
     def prediction(self, dt, state=None):
         if state == None:
             state = self.state
+        #print("DT = " + str(dt))
         Obsticle.F[0][2] = dt
         Obsticle.F[1][3] = dt
         new_state = np.dot( Obsticle.F, state )
         new_cov = np.dot( Obsticle.F, np.dot( self.cov, Obsticle.F.T ) )
         return (new_state, new_cov)
 
-    def update(state, time, cov):
+    def update(self, state, time, cov):
         self.health = 50
-        (X_k, P_k) = prediction( time - self.lasttime )
+        print("TIME %i" % time)
+        (X_k, P_k) = self.prediction( time - self.lasttime )
+        print("X_k: " + str(X_k))
+        print("P_k: " + str(P_k))
         residual = state - np.dot( Obsticle.H, X_k )
         S_k = np.dot(Obsticle.H, np.dot( P_k, Obsticle.H.T )) + np.diag([ cov, cov, cov, cov ])
-        K_k = np.dot( P_k, np.dot( Obtsicle.H.T, np.inv( S_k ) ) )
+        K_k = np.dot( P_k, np.dot( Obsticle.H.T, np.linalg.inv( S_k ) ) )
         self.state = X_k + np.dot( K_k, residual )
         self.cov = P_k - np.dot( K_k, np.dot( S_k, K_k.T ) )
 
+    def __str__(self):
+        return str(self.state) + "  health: " + str(self.health)
 
     def dist( self, x, y, t):
+        #print( "Time %i" % t )
         (state, _) = self.prediction(t - self.lasttime)
-        return np.sqrt( (x-state[0])**2, (y-state[1])**2 )
+        return np.sqrt( ((x-state[0])**2) + ((y-state[1])**2 ))
 
     def nextState( self, x, y, t ):
         return np.array( [ x, y, (x - self.state[0]) / ( t - self.lasttime ), ( y - self.state[1] ) / ( t - self.lasttime ) ] )
@@ -91,7 +99,7 @@ class Obsticle:
         return pred
 
 def distance(p1, p2):
-    return np.sqrt( np.pow( p1[0]-p2[0], 2 ) + np.pow( p1[1] - p2[1], 2 ) )
+    return np.sqrt( ( (p1[0]-p2[0]) ** 2 ) + ( (p1[1] - p2[1]) ** 2 ) )
 
 def cluster_points(points, maxDistance):
     clusters = []
@@ -102,12 +110,17 @@ def cluster_points(points, maxDistance):
             continue
         else:
             usedPoints[i] = 1
+        c = (points[i][0], points[i][1])
         canopy = set([points[i]])
         for j in xrange(i+1, len( points ) ):
             if usedPoints[j] == 1:
                 continue
-            if dist( points[i], points[j] ) < maxDistance:
-                canopy.add(point[j])
+            if distance( c, points[j] ) < maxDistance:
+                canopy.add(points[j])
+                c = ( c[0] * (1.0 - (1 / len(canopy))) , c[1] * (1.0 - (1 / len(canopy))))
+                cx = points[j][0] / len( canopy )
+                cy = points[j][1] / len( canopy )
+                c = ( c[0] + cx, c[1] + cy )
                 usedPoints[j] = 1
         clusters.append( canopy )
     return clusters
@@ -117,11 +130,12 @@ def cluster_points(points, maxDistance):
 
 
 def subtract_map(points):
+    global world_map, map_resolution
     '''
     Purpose: filters out points wich can be accounted for by the map
     Assumes: the points have been transformed into map space.
     '''
-    return np.array( filter( lambda p: not ( np.floor(p[0] / map_resolution), np.floor( p[1] / map_resolution ) ) in world_map, points ) )
+    return filter( lambda p: not ( np.floor(p[0] / map_resolution), np.floor( p[1] / map_resolution ) ) in world_map, points )
 
 def polar_to_euclidean( angles, ranges ):
     '''
@@ -135,7 +149,7 @@ def translate_points(points, by):
     Purpose: Translates iterable object of points and translates them by (dx, dy) tuple 'by'
     Assumes: points are in the format [ [x1, y1], [x2, y2], ...]
     '''
-    return [ [ p[0] - by[0], p[1] - by[1] ] for p in points ]
+    return [ ( p[0] - by[0], p[1] - by[1] ) for p in points ]
 
 def rotate_points_about_origin( points, theta ):
     '''
@@ -146,6 +160,7 @@ def rotate_points_about_origin( points, theta ):
     return np.dot( points, R.T )
 
 def update_position(data):
+    global position_estimate
     position_estimate = data.pose.pose
 
 
@@ -166,17 +181,26 @@ def cluster_to_object( points ):
 
 
 def handle_scan_input(data):
+    global position_estimate
+    global obsticles
+    global map_resolution
     if position_estimate == None:
+        print("No position esitmate")
         return
-
-    time = (data.header.stamp.sec * 10**9) + data.header.stamp.sec
-
+    time = float(data.header.stamp.secs) + (float(data.header.stamp.nsecs) / (1e-9))
+    print(time)
     points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
-    points = np.dot( points, np.array( [[ -position_estimate.orientation.x, position_estimate.orientation.y ],
-        [-position_estimate.orientation.y, -position_estimate.orientation.x]] ) )
-    points = translate_points( points, ( data.position.x, data.position.y ) )
-    clusters = cluster_points(points)
 
+    t1 = 2 * ( (position_estimate.orientation.w * position_estimate.orientation.z) + ( position_estimate.orientation.x * position_estimate.orientation.y ) )
+    t2 = 1 + ( 2 * ( (position_estimate.orientation.y ** 2) + (position_estimate.orientation.z ** 2)))
+    theta = -np.arctan2( t1, t2 )
+    print("Theta: %f" % theta)
+    #points = np.dot( points, np.array( [[ -position_estimate.orientation.x, position_estimate.orientation.y ],
+    #    [-position_estimate.orientation.y, -position_estimate.orientation.x]] ) )
+    points = rotate_points_about_origin(points, theta)
+    points = translate_points( points, ( position_estimate.position.x, position_estimate.position.y ) )
+    points = subtract_map( points )
+    clusters = cluster_points(points, MAX_ACCEPTED_DIST_FACTOR)
     found_obsticles = map( cluster_to_object, clusters )
 
     obsts_living = np.zeros( len(obsticles) )
@@ -190,16 +214,19 @@ def handle_scan_input(data):
         if closest == None:
             obsticles.append( Obsticle(c[0], c[1], time, cov) )
         else:
-            obsticles[i].update( obsticles[i].nextState( c[0], c[0], time ), time, cov )
-            obsts_living[i] = 1
+            if i < len( obsts_living ):
+                obsticles[i].update( obsticles[i].nextState( c[0], c[0], time ), time, cov )
+                obsts_living[i] = 1
     for i, h in zip( range(len(obsts_living)), obsts_living ):
         if h == 0:
             obsticles[i].age()
-    obsticles = [ o for o in obsticles if o.is_healthy() ]
 
+    #obsticles = [ o for o in obsticles if o.is_healthy() ]
+    print( '\n'.join( map( str, obsticles ) ) )
 
 
 def handle_obsticle_request(req):
+    global obsticles
     obs = Obsticles()
     obs.count = len(obsticles)
     for o in obsticles:
@@ -210,6 +237,8 @@ def handle_obsticle_request(req):
 
 
 def init_node():
+    global world_map
+    global map_resolution
     rospy.init_node('obst_tracker')
     rospy.wait_for_service('static_map')
     try:
@@ -229,8 +258,8 @@ def init_node():
     rospy.Service("get_obsticles", GetObsticles, handle_obsticle_request)
 
 def subscribe():
-    rospy.Subscriber("scan", LaserScan, handle_scan_input)
-    rospy.Subscriber("amcl_pose", PoseWithCovarianceStamped, update_position)
+    rospy.Subscriber("/RosAria/lms5XX_1_laserscan", LaserScan, handle_scan_input)
+    rospy.Subscriber("/RosAria/pose", Odometry, update_position)
 
 
 
