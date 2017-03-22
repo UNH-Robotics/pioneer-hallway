@@ -14,7 +14,7 @@ predictedFramePub = None
 cmdVelPub = None
 
 #value in seconds
-delta = 1
+deltaT = 1
 
 #values in meters
 robotLength = 0.455
@@ -65,12 +65,12 @@ def laserCallback(sensor_data):
 	cp3 = Point32(currPose.position.x + robotFrameD.x, currPose.position.y + robotFrameD.y, 0)
 	
 	#predict vertices
-	deltaX = currTwist.linear.x * delta
-	deltaY = currTwist.linear.y * delta
-	pp0 = Point32(currPose.position.x + robotFrameA.x + deltaX, currPose.position.y + robotFrameA.y + deltaY, 0)
-	pp1 = Point32(currPose.position.x + robotFrameB.x + deltaX, currPose.position.y + robotFrameB.y + deltaY, 0)
-	pp2 = Point32(currPose.position.x + robotFrameC.x + deltaX, currPose.position.y + robotFrameC.y + deltaY, 0)
-	pp3 = Point32(currPose.position.x + robotFrameD.x + deltaX, currPose.position.y + robotFrameD.y + deltaY, 0)
+	delta = Point32(currTwist.linear.x * deltaT, currTwist.linear.y * deltaT, 0)
+	rotatePose(delta, currPose.orientation)
+	pp0 = Point32(currPose.position.x + robotFrameA.x + delta.x, currPose.position.y + robotFrameA.y + delta.y, 0)
+	pp1 = Point32(currPose.position.x + robotFrameB.x + delta.x, currPose.position.y + robotFrameB.y + delta.y, 0)
+	pp2 = Point32(currPose.position.x + robotFrameC.x + delta.x, currPose.position.y + robotFrameC.y + delta.y, 0)
+	pp3 = Point32(currPose.position.x + robotFrameD.x + delta.x, currPose.position.y + robotFrameD.y + delta.y, 0)
 	
 	#create final polygons
 	polyCurr.polygon.points = [None] * 4
@@ -104,8 +104,8 @@ def estop():
 	global currentFramePub
 	global cmdVelPub
 	rospy.wait_for_service('disable_motors')
-	rospy.loginfo('Connected to motors')
 	rospy.init_node('pioneer_estop', anonymous=False)
+	rospy.loginfo('Connected to motors')
 	rospy.Subscriber('base_scan', LaserScan, laserCallback)
 	rospy.Subscriber('odom', Odometry, poseCallback)
 	currentFramePub = rospy.Publisher('estop_current_frame', PolygonStamped, queue_size=1)
