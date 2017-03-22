@@ -1,4 +1,8 @@
 <launch>
+	<param name="amcl/initial_pose_x" value="-2.0" />
+	<param name="amcl/initial_pose_y" value="-0.5" />
+	<param name="amcl/initial_pose_a" value="0" />
+	
 	<!-- start gazebo -->
 	<include file="$(find pioneer_hallway)/launch/gazebo_small_world.launch"/> 
 	 
@@ -6,9 +10,11 @@
 	<include file="$(find pioneer_ros)/launch/pioneer_controller.launch"/>
 	
 	<!-- start amcl node -->
-	<node pkg="gmapping" type="slam_gmapping" name="gmapping">
-	  <remap from="scan" to="base_scan"/> 
-	</node>
+	<include file="$(find pioneer_hallway)/launch/amcl_pioneer.launch"/>
+	
+	<!-- start map server -->
+    <arg name="map_file" default="$(find pioneer_hallway)/maps/gazebo_sim.yaml"/>
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 	
 	<!-- start rviz -->
 	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch"/>
