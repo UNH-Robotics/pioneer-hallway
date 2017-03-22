@@ -14,6 +14,7 @@ import rospy
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from std_srvs.srv import Empty
 from threading import Thread
 from primutils import Primitive, read_primitives, read_primitives_with_duration
@@ -61,19 +62,20 @@ def executive_listener():
 
 def pose_callback(data):
     global currentState
-    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
-                  "linear x: %.2f" % data.twist.linear.x + "\n" + 
-                  "linear y: %.2f" % data.twist.linear.y+"\n"+
-                  "linear z: %.2f" % data.twist.linear.z+"\n"+
-                  "angular x: %.2f" % data.twist.angular.x+"\n"+
-                  "angular y: %.2f" % data.twist.angular.y+"\n"+
-                  "angular z: %.2f" % data.twist.angular.z+"\n" +
-                  "position x: %.2f" %data.pose.pose.position.x + "\n" +
-                  "position y: %.2f" %data.pose.pose.position.y + "\n" +
-                  "orentation x: %.2f" %data.pose.pose.orientation.x + "\n" +
-                  "orentation y: %.2f" %data.pose.pose.orientation.y + "\n" +
-                  "orentation z: %.2f" %data.pose.pose.orientation.z + "\n" +
-                  "orentation w: %.2f" %data.pose.pose.orientation.w + "\n")
+    # rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+    #               "linear x: %.2f" % data.twist.twist.linear.x + "\n" + 
+    #               "linear y: %.2f" % data.twist.twist.linear.y+"\n"+
+    #               "linear z: %.2f" % data.twist.twist.linear.z+"\n"+
+    #               "angular x: %.2f" % data.twist.twist.angular.x+"\n"+
+    #               "angular y: %.2f" % data.twist.twist.angular.y+"\n"+
+    #               "angular z: %.2f" % data.twist.twist.angular.z+"\n" +
+    #               "position x: %.2f" %data.pose.pose.position.x + "\n" +
+    #               "position y: %.2f" %data.pose.pose.position.y + "\n" +
+    #               "orentation x: %.2f" %data.pose.pose.orientation.x + "\n" +
+    #               "orentation y: %.2f" %data.pose.pose.orientation.y + "\n" +
+    #               "orentation z: %.2f" %data.pose.pose.orientation.z + "\n" +
+    #               "orentation w: %.2f" %data.pose.pose.orientation.w + "\n")
+    #rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info')
     quaternion = (
         data.pose.pose.orientation.x,
         data.pose.pose.orientation.y,
@@ -81,15 +83,17 @@ def pose_callback(data):
         data.pose.pose.orientation.w)
     euler = tf.transformations.euler_from_quaternion(quaternion)
     h = euler[2]
-    currenntState = State(data.pose.pose.position.x,
+    currentState = State(data.pose.pose.position.x,
                           data.pose.pose.position.y,
-                          data.twist.linear.x,
-                          data.twist.angular.z,
+                          data.twist.twist.linear.x,
+                          data.twist.twist.angular.z,
                           h,
                           time.time())
 
 def pose_listener():
-    rospy.Subscriber('pose', Odometry, pose_callback)
+    rospy.Subscriber('RosAria/pose', Odometry, pose_callback)
+    #rospy.Subscriber('odom', Odometry, pose_callback)
+    #rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, pose_callback)
     rospy.spin()
 
 def sampling_based_controller(refAction, start, end, beginClock):
@@ -120,7 +124,7 @@ def move():
     global receivedGoalState
     global changePlan
     global currentState
-    currentState = State(1, 1, 1, 1, 1, 1)
+    #currentState = State(1, 1, 1, 1, 1, 1)
     #here,we publish actions to the topic 'cmd_vel'
     pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     # The local controller run at 60hz
@@ -151,7 +155,7 @@ def move():
             rate.sleep()
     rospy.logerr("Not Received Action!")
     disable_motors = rospy.ServiceProxy('disable_motors', Empty)
-    #disable_motors.call()
+    disable_motors.call()
 
 def init_motions():
     global duration
@@ -174,7 +178,7 @@ def wait_for_first_action():
 if __name__ == '__main__':
     init_motions();
     rospy.init_node('controller_node', anonymous=True)
-    #rospy.wait_for_service('disable_motors')
+    rospy.wait_for_service('disable_motors')
     execListernerThread = Thread(target=executive_listener, args=())
     poseListernerThread = Thread(target=pose_listener, args=())
     controllerPublisherThread = Thread(target=move, args=())
