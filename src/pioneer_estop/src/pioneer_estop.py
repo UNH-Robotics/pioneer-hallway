@@ -104,8 +104,8 @@ def estop():
 	global currentFramePub
 	global cmdVelPub
 	rospy.wait_for_service('disable_motors')
-	rospy.loginfo('Connected to motors')
 	rospy.init_node('pioneer_estop', anonymous=False)
+	rospy.loginfo('Connected to motors')
 	rospy.Subscriber('base_scan', LaserScan, laserCallback)
 	rospy.Subscriber('odom', Odometry, poseCallback)
 	currentFramePub = rospy.Publisher('estop_current_frame', PolygonStamped, queue_size=1)

@@ -38,7 +38,6 @@
     <remap from="scan" to="base_scan"/>    
     <remap from="static_map" to="/static_map" /> 
     <remap from="map" to="/map" />
-	<remap from="amcl_pose" to="RosAria/pose" />
   </node>
 
 </launch>
