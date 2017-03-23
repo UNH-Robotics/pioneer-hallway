@@ -178,7 +178,7 @@ def wait_for_first_action():
 if __name__ == '__main__':
     init_motions();
     rospy.init_node('controller_node', anonymous=True)
-    rospy.wait_for_service('disable_motors')
+    rospy.wait_for_service('RosAria/disable_motors')
     execListernerThread = Thread(target=executive_listener, args=())
     poseListernerThread = Thread(target=pose_listener, args=())
     controllerPublisherThread = Thread(target=move, args=())
