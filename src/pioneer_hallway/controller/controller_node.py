@@ -62,19 +62,19 @@ def executive_listener():
 
 def pose_callback(data):
     global currentState
-    # rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
-    #               "linear x: %.2f" % data.twist.twist.linear.x + "\n" + 
-    #               "linear y: %.2f" % data.twist.twist.linear.y+"\n"+
-    #               "linear z: %.2f" % data.twist.twist.linear.z+"\n"+
-    #               "angular x: %.2f" % data.twist.twist.angular.x+"\n"+
-    #               "angular y: %.2f" % data.twist.twist.angular.y+"\n"+
-    #               "angular z: %.2f" % data.twist.twist.angular.z+"\n" +
-    #               "position x: %.2f" %data.pose.pose.position.x + "\n" +
-    #               "position y: %.2f" %data.pose.pose.position.y + "\n" +
-    #               "orentation x: %.2f" %data.pose.pose.orientation.x + "\n" +
-    #               "orentation y: %.2f" %data.pose.pose.orientation.y + "\n" +
-    #               "orentation z: %.2f" %data.pose.pose.orientation.z + "\n" +
-    #               "orentation w: %.2f" %data.pose.pose.orientation.w + "\n")
+    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+                  "linear x: %.2f" % data.twist.twist.linear.x + "\n" + 
+                  "linear y: %.2f" % data.twist.twist.linear.y+"\n"+
+                  "linear z: %.2f" % data.twist.twist.linear.z+"\n"+
+                  "angular x: %.2f" % data.twist.twist.angular.x+"\n"+
+                  "angular y: %.2f" % data.twist.twist.angular.y+"\n"+
+                  "angular z: %.2f" % data.twist.twist.angular.z+"\n" +
+                  "position x: %.2f" %data.pose.pose.position.x + "\n" +
+                  "position y: %.2f" %data.pose.pose.position.y + "\n" +
+                  "orentation x: %.2f" %data.pose.pose.orientation.x + "\n" +
+                  "orentation y: %.2f" %data.pose.pose.orientation.y + "\n" +
+                  "orentation z: %.2f" %data.pose.pose.orientation.z + "\n" +
+                  "orentation w: %.2f" %data.pose.pose.orientation.w + "\n")
     #rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info')
     quaternion = (
         data.pose.pose.orientation.x,
