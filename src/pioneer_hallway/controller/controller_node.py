@@ -44,6 +44,17 @@ class State(object):
         self.w = float(w)
         self.h = float(h)
         self.t = t
+        
+    def set_pose(self, x, y, h, t):
+        self.x = float(x)
+        self.y = float(y)
+        self.h = float(h)
+        self.t = t
+
+    def set_twist(self, v, w, t):
+        self.v = float(v)
+        self.w = float(w)
+        self.t = t
 
 def executive_callback(data):
     global receivedAction
@@ -89,11 +100,50 @@ def pose_callback(data):
                           data.twist.twist.angular.z,
                           h,
                           time.time())
+    
+def amclpose_callback(data):
+    global currentState
+    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+                  "position x: %.2f" %data.pose.pose.position.x + "\n" +
+                  "position y: %.2f" %data.pose.pose.position.y + "\n" +
+                  "orentation x: %.2f" %data.pose.pose.orientation.x + "\n" +
+                  "orentation y: %.2f" %data.pose.pose.orientation.y + "\n" +
+                  "orentation z: %.2f" %data.pose.pose.orientation.z + "\n" +
+                  "orentation w: %.2f" %data.pose.pose.orientation.w + "\n")
+    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info')
+    quaternion = (
+        data.pose.pose.orientation.x,
+        data.pose.pose.orientation.y,
+        data.pose.pose.orientation.z,
+        data.pose.pose.orientation.w)
+    euler = tf.transformations.euler_from_quaternion(quaternion)
+    h = euler[2]
+    currentState.set_pose(data.pose.pose.position.x,
+                          data.pose.pose.position.y,
+                          h,
+                          time.time())
 
+def twist_callback(data):
+    global currentState
+    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+                  "linear x: %.2f" % data.linear.x + "\n" + 
+                  "linear y: %.2f" % data.linear.y+"\n"+
+                  "linear z: %.2f" % data.linear.z+"\n"+
+                  "angular x: %.2f" % data.angular.x+"\n"+
+                  "angular y: %.2f" % data.angular.y+"\n"+
+                  "angular z: %.2f" % data.angular.z+"\n" )
+    currentState.set_twist(data.linear.x,
+                           data.angular.z,
+                           time.time())
+
+    
 def pose_listener():
-    rospy.Subscriber('RosAria/pose', Odometry, pose_callback)
+    global currentState
+    #rospy.Subscriber('RosAria/pose', Odometry, pose_callback)
     #rospy.Subscriber('odom', Odometry, pose_callback)
-    #rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, pose_callback)
+    currentState = State(1, 1, 1, 1, 1, 1)
+    rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclpose_callback)
+    rospy.Subscriber('cmd_vel', Twist, twist_callback)
     rospy.spin()
 
 def sampling_based_controller(refAction, start, end, beginClock):
@@ -124,7 +174,6 @@ def move():
     global receivedGoalState
     global changePlan
     global currentState
-    #currentState = State(1, 1, 1, 1, 1, 1)
     #here,we publish actions to the topic 'cmd_vel'
     pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     # The local controller run at 60hz
