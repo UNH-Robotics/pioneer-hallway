@@ -154,7 +154,7 @@ def move():
             pub.publish(motion)
             rate.sleep()
     rospy.logerr("Not Received Action!")
-    disable_motors = rospy.ServiceProxy('disable_motors', Empty)
+    disable_motors = rospy.ServiceProxy('RosAria/disable_motors', Empty)
     disable_motors.call()
 
 def init_motions():
