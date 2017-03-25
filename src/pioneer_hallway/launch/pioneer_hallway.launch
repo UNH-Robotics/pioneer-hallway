@@ -1,21 +1,19 @@
-<launch>
-	<!-- Arguments for the launch file -->
-	 <arg name="map_file" default="$(find pioneer_hallway)/maps/kings2F.yaml"/>
-	 
+<launch> 
 	<!-- rosaria node -->
 	<include file="$(find pioneer_hallway)/launch/rosaria_pioneer_hallway.launch"/>
 	
 	<!-- start nodes for pioneer sensors -->
 	<include file="$(find pioneer_hallway)/launch/pioneer_hallway_sensors.launch"/>
 
-	<!-- controller node - NOT NEEDED FOR HALLWAY?-->
-	<include file="$(find pioneer_test)/launch/pioneer_controller_spin_recover.launch"/>
-	
-	<!-- map server -->
-	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+	<!-- controller node -->
+	<include file="$(find pioneer_test)/launch/pioneer_controller.launch"/>
 	
 	<!-- start amcl -->
 	<include file="$(find pioneer_hallway)/launch/amcl_pioneer_hallway.launch"/>
+	
+	<!-- map server -->
+	<arg name="map_file" default="$(find pioneer_hallway)/maps/kings2F.yaml"/>
+	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 	
 	<!-- start rviz -->
 	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch"/>

@@ -1,20 +1,23 @@
 #!/usr/bin/env python
 
 import rospy
+import math
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import PolygonStamped
 from geometry_msgs.msg import Point32
 from std_srvs.srv import Empty
 
+#globla variables
 pose = None
 currentFramePub = None
 predictedFramePub = None
 cmdVelPub = None
 
 #value in seconds
-deltaT = 1
+deltaT = 4.5
 
 #values in meters
 robotLength = 0.455
@@ -25,20 +28,28 @@ frame = 'odom'
 robotLengthFromCenter = (robotLength + robotLCushion) / 2
 robotWidthFromCenter = (robotWidth + robotWCushion) / 2
 
+#calculates the distance between a point and a line
+#lineEnd and lineStart define the end and start points of the line
+#point is the point we want to calculate the distance to
 def calculateDistance(lineEnd, lineStart, point):
 	distance = abs((lineEnd.y - lineStart.y) * point.x - (lineEnd.x - lineStart.x) * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x) / pow(pow(lineEnd.y - lineStart.y,2) + pow(lineEnd.x - lineStart.x,2), 1/2)
 	return distance
 
+#rotates a point given a quaternion
+#pin is the point that will be rotated
+#q is the quaternion that will be used to ratet the point
 def rotatePose(pin, q):
 	x = q.w * q.w * pin.x - 2 * q.z * q.w * pin.y + q.x * q.x * pin.x + 2 * q.y *q.x * pin.y - q.z * q.z * pin.x - q.y * q.y * pin.x;
 	y = 2 * q.x * q.y * pin.x + q.y * q.y * pin.y + 2 * q.w * q.z * pin.x - q.z *q.z * pin.y + q.w * q.w * pin.y - q.x * q.x * pin.y;
 	pin.x = x
 	pin.y = y
 
+#receives and stores the current position of the robot
 def poseCallback(odom):
 	global pose
 	pose = odom
 
+#predict collisions and stops the motors if necessary
 def laserCallback(sensor_data):
 	#get current pose
 	currPose = pose.pose.pose
@@ -65,8 +76,17 @@ def laserCallback(sensor_data):
 	cp3 = Point32(currPose.position.x + robotFrameD.x, currPose.position.y + robotFrameD.y, 0)
 	
 	#predict vertices
+	#calculates linear movement
 	delta = Point32(currTwist.linear.x * deltaT, currTwist.linear.y * deltaT, 0)
 	rotatePose(delta, currPose.orientation)
+	#calculates angular movement
+	newOrientation = Quaternion()
+	newOrientation.z = math.sin(currTwist.angular.z * deltaT / 2)
+	newOrientation.w = math.cos(currTwist.angular.z * deltaT / 2)
+	rotatePose(robotFrameA, newOrientation)
+	rotatePose(robotFrameB, newOrientation)
+	rotatePose(robotFrameC, newOrientation)
+	rotatePose(robotFrameD, newOrientation)
 	pp0 = Point32(currPose.position.x + robotFrameA.x + delta.x, currPose.position.y + robotFrameA.y + delta.y, 0)
 	pp1 = Point32(currPose.position.x + robotFrameB.x + delta.x, currPose.position.y + robotFrameB.y + delta.y, 0)
 	pp2 = Point32(currPose.position.x + robotFrameC.x + delta.x, currPose.position.y + robotFrameC.y + delta.y, 0)
@@ -87,27 +107,36 @@ def laserCallback(sensor_data):
 	polyPred.polygon.points[3] = pp2
 	polyPred.header.frame_id = frame
 	
+	#check for collisions
+	laserDistance = sensor_data.ranges[len(sensor_data.ranges)/2]
+	distFront = calculateDistance(pp0, pp1, currPose.position)
+	distRight = calculateDistance(pp1, pp3, currPose.position)
+	distLeft = calculateDistance(pp3, pp2, currPose.position)
+	distBack = calculateDistance(pp2, pp0, currPose.position)
+	for point in sensor_data.ranges:
+		if (laserDistance <= distFront or
+		    laserDistance <= distLeft or 
+		    laserDistance <= distRight or
+		    laserDistance <= distBack):
+			rospy.loginfo('Possible collision detected.')
+			disableMotors = rospy.ServiceProxy('RosAria/disable_motors', Empty)
+			disableMotors()
+	
 	#publish polygons
 	currentFramePub.publish(polyCurr)
 	predictedFramePub.publish(polyPred)
-	
-	laserDistance = sensor_data.ranges[len(sensor_data.ranges)/2]
-	predictedDistance = calculateDistance(pp0, pp1, currPose.position)
-	if laserDistance <= predictedDistance:
-		rospy.loginfo('Possible collision detected. %f  -  %f', laserDistance, predictedDistance)
-		#cmdVelPub.publish(Twist())
-		disableMotors = rospy.ServiceProxy('disable_motors', Empty)
-		disableMotors()
+
 
 def estop():
 	global predictedFramePub
 	global currentFramePub
 	global cmdVelPub
-	rospy.wait_for_service('disable_motors')
+	rospy.wait_for_service('RosAria/disable_motors')
 	rospy.init_node('pioneer_estop', anonymous=False)
 	rospy.loginfo('Connected to motors')
-	rospy.Subscriber('base_scan', LaserScan, laserCallback)
-	rospy.Subscriber('odom', Odometry, poseCallback)
+	rospy.Subscriber('RosAria/lms5XX_1_laserscan', LaserScan, laserCallback)
+	#rospy.Subscriber('base_scan', LaserScan, laserCallback)
+	rospy.Subscriber('RosAria/pose', Odometry, poseCallback)
 	currentFramePub = rospy.Publisher('estop_current_frame', PolygonStamped, queue_size=1)
 	predictedFramePub = rospy.Publisher('estop_predicted_frame', PolygonStamped, queue_size=1)
 	cmdVelPub = rospy.Publisher('cmd_vel', Twist, queue_size=1)

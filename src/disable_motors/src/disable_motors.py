@@ -14,7 +14,7 @@ def serviceCallback(response):
 def disable_motors():
 	global cmdVelPub
 	rospy.init_node('disable_motors')
-	service = rospy.Service('disable_motors', Empty, serviceCallback)
+	service = rospy.Service('RosAria/disable_motors', Empty, serviceCallback)
 	cmdVelPub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
 	rospy.loginfo("Service ready...")
 	rospy.spin()

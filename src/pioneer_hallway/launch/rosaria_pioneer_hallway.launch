@@ -4,5 +4,6 @@
 		<param name="TicksMM" value="175"/>
 		<param name="RevCount" value="14750"/>
 		<param name="DriftFactor" value="-20"/>
+		<param name="cmd_vel_timeout" value="0"/>
 	</node>
 </launch>
