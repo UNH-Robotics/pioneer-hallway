@@ -9,7 +9,7 @@ import math
 
 ActionResult = namedtuple("ActionResult", "")
 PrimitiveResult = namedtuple("PrimitiveResult",
-                             "name la wa vkey wkey hkey x y h path")
+                             "name la wa vkey hkey x y h path")
 PrimitiveEntry = namedtuple("PrimitiveEntry", "x y h path")
 
 class Primitive(object):
@@ -20,7 +20,7 @@ class Primitive(object):
         self.config = config
         self.entries = entries
 
-    def get_entry(self, state_v, state_w, state_h):
+    def get_entry(self, state_v, state_h):
         """
         :param state_v: state's linear velocity (in m/s)
         :param state_w: state's angular velocity (in radians/s)
@@ -28,9 +28,8 @@ class Primitive(object):
         :return: tuple of (x y h path)
         """
         vkey = round(state_v / self.config["linear_velocity_divisor"])
-        wkey = round(state_w / self.config["angular_velocity_divisor"])
         hkey = round(state_h / self.config["heading_divisor"])
-        return self.entries.get((self.name, vkey, wkey, hkey), None)
+        return self.entries.get((self.name, vkey, hkey), None)
 
 
     def apply(self, x, y, state_v, state_w, state_h):
@@ -64,13 +63,12 @@ def read_primitives(filename):
     config = {
        "action_duration":float(lines[0]),
         "linear_velocity_divisor":float(lines[1]),
-        "angular_velocity_divisor":float(lines[2]),
-        "heading_divisor":float(lines[3]),
+        "heading_divisor":float(lines[2]),
     }
 
-    for line in lines[4:]:
+    for line in lines[3:]:
         elements = line.split("\t")
-        if len(elements) < 10:
+        if len(elements) < 9:
             continue
 
         p = PrimitiveResult(*(line.split("\t")))
@@ -79,7 +77,7 @@ def read_primitives(filename):
                 for i in re.finditer("([\-0-9]+), ([\-0-9]+)", p.path)]
 
         pentry = PrimitiveEntry(float(p.x), float(p.y), float(p.h), path)
-        primitive_entries[(p.name, int(p.vkey), int(p.wkey), int(p.hkey))] = pentry
+        primitive_entries[(p.name, int(p.vkey), int(p.hkey))] = pentry
 
     primitives = [Primitive(i[0], i[1], i[2], config, primitive_entries) for
                   i in primitive_controls]
