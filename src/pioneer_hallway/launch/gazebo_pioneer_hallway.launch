@@ -1,5 +1,7 @@
 <launch>
 	<remap from="odom" to="RosAria/pose" />
+	<param name="laserTopic" value="base_scan" />
+	<param name="estopSoundCommand" value="/usr/bin/canberra-gtk-play --id='beep'" />
 	<param name="amcl/initial_pose_x" value="-2.0" />
 	<param name="amcl/initial_pose_y" value="-0.5" />
 	<param name="amcl/initial_pose_a" value="0" />
@@ -14,8 +16,8 @@
 	<include file="$(find pioneer_hallway)/launch/amcl_pioneer.launch"/>
 	
 	<!-- start map server -->
-    <arg name="map_file" default="$(find pioneer_hallway)/maps/gazebo_sim.yaml"/>
-    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+   <arg name="map_file" default="$(find pioneer_hallway)/maps/gazebo_sim.yaml"/>
+   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 	
 	<!-- start rviz -->
 	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch"/>
