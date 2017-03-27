@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   geometry_msgs
   message_generation
+  laser_geometry
 )
 
 ## System dependencies are found with CMake's conventions
@@ -53,14 +54,15 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   ObsticlePrediction.msg
-   Obsticles.msg 
+   Obstacle.msg
+   ObstaclePrediction.msg
+   Obstacles.msg
  )
 
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
-   GetObsticles.srv
+   GetObstacles.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -129,6 +131,10 @@ include_directories(
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/pioneer_hallway.cpp
 # )
+
+
+
+
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
