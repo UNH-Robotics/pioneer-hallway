@@ -40,10 +40,9 @@ class Primitive(object):
 
     def generate_states(self):
         for lv in lv_states:
-            if lv_bounds[0] <= lv + self.accel <= lv_bounds[1]:
+            if lv_bounds[0] <= lv + self.accel <= lv_bounds[1] + 0.01:
                 for heading in heading_states:
-                    for w in av_controls:
-                        yield (heading, lv, w)
+                    yield (heading, lv)
 
     def get_results(self):
         action_results = []
@@ -51,18 +50,20 @@ class Primitive(object):
             action_results.append(self.apply_primitive(*state))
         return action_results
 
-    def apply_primitive(self, heading, lv, w):
+    def apply_primitive(self, heading, lv):
         collision_cells = set()
         x, y, cur_lv, cur_av = 0, 0, 0, 0
 
         for t in np.arange(0, 1.000001, 0.001):
             cur_lv = (lv * t * action_duration) + (self.accel * action_duration) * 0.5 * t**2
-            cur_av = heading + w*t + self.av * 0.5 * t**2
+            # cur_av = heading + w*t + self.av * 0.5 * t**2
+            cur_av = heading + self.av * 0.5 * t**2
             x = cur_lv * cos(cur_av)
             y = cur_lv * sin(cur_av)
             collision_cells.add((int(x / map_scale), int(y / map_scale)))
 
-        new_heading = heading + w + self.av * 0.5
+        # new_heading = heading + w + self.av * 0.5
+        new_heading = heading + self.av * 0.5
         if new_heading < 0:
             new_heading = 2 * pi + new_heading
         elif new_heading > 2 * pi:
