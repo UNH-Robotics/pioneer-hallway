@@ -2,16 +2,18 @@
 
 import rospy
 import math
+import subprocess
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist
-from geometry_msgs.msg import Quaternion
-from geometry_msgs.msg import PolygonStamped
-from geometry_msgs.msg import Point32
+from geometry_msgs.msg import PoseWithCovarianceStamped, Point32
+from geometry_msgs.msg import Twist, Quaternion, PolygonStamped
 from std_srvs.srv import Empty
 
-#globla variables
-pose = None
+#global variables
+rosAriaPose = Odometry()
+amclPose = PoseWithCovarianceStamped()
+soundCommand = None
+disablePublisher = None
 currentFramePub = None
 predictedFramePub = None
 cmdVelPub = None
@@ -24,7 +26,7 @@ robotLength = 0.455
 robotWidth = 0.381
 robotLCushion = 0.16
 robotWCushion = 0.12
-frame = 'odom'
+frame = 'map'
 robotLengthFromCenter = (robotLength + robotLCushion) / 2
 robotWidthFromCenter = (robotWidth + robotWCushion) / 2
 
@@ -44,16 +46,21 @@ def rotatePose(pin, q):
 	pin.x = x
 	pin.y = y
 
+#receives and stores the current velocity of the robot
+def rosAriaPoseCallback(odom):
+	global rosAriaPose
+	rosAriaPose = odom
+	
 #receives and stores the current position of the robot
-def poseCallback(odom):
-	global pose
-	pose = odom
+def amclPoseCallback(pose):
+	global amclPose
+	amclPose = pose
 
 #predict collisions and stops the motors if necessary
 def laserCallback(sensor_data):
 	#get current pose
-	currPose = pose.pose.pose
-	currTwist = pose.twist.twist
+	currPose = amclPose.pose.pose
+	currTwist = rosAriaPose.twist.twist
 	
 	#create polygons
 	polyCurr = PolygonStamped()
@@ -118,9 +125,10 @@ def laserCallback(sensor_data):
 		    laserDistance <= distLeft or 
 		    laserDistance <= distRight or
 		    laserDistance <= distBack):
+			disablePublisher()
 			rospy.loginfo('Possible collision detected.')
-			disableMotors = rospy.ServiceProxy('RosAria/disable_motors', Empty)
-			disableMotors()
+			subprocess.call(['/usr/bin/canberra-gtk-play','--id','beep'])
+			exit()
 	
 	#publish polygons
 	currentFramePub.publish(polyCurr)
@@ -128,18 +136,22 @@ def laserCallback(sensor_data):
 
 
 def estop():
+	global disablePublisher
 	global predictedFramePub
 	global currentFramePub
-	global cmdVelPub
-	rospy.wait_for_service('RosAria/disable_motors')
+	global cmdVelPub	
+	global soundCommand
 	rospy.init_node('pioneer_estop', anonymous=False)
-	rospy.loginfo('Connected to motors')
-	rospy.Subscriber('RosAria/lms5XX_1_laserscan', LaserScan, laserCallback)
-	#rospy.Subscriber('base_scan', LaserScan, laserCallback)
-	rospy.Subscriber('RosAria/pose', Odometry, poseCallback)
+	laserTopic = rospy.get_param("laserTopic", "lms5XX_1_laserscan")
+	soundCommand = rospy.get_param("estopSoundCommand", "")
+	rospy.wait_for_service('disable_cmd_vel_publisher')
+	rospy.Subscriber(laserTopic, LaserScan, laserCallback)
+	rospy.Subscriber('RosAria/pose', Odometry, rosAriaPoseCallback)
+	rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclPoseCallback)
 	currentFramePub = rospy.Publisher('estop_current_frame', PolygonStamped, queue_size=1)
 	predictedFramePub = rospy.Publisher('estop_predicted_frame', PolygonStamped, queue_size=1)
-	cmdVelPub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
+	disablePublisher = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
+	rospy.loginfo('estop ready')
 	rospy.spin()
 		
 

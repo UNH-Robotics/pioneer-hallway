@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <name>cmd_vel_publisher</name>
+  <version>0.0.1</version>
+  <description>Commands publisher for the pioneer hallway project</description>
+
+  <maintainer email="erp48@cs.unh.edu">Estuardo Carpio</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>std_srvs</build_depend>
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>std_srvs</run_depend>
+
+  <export>
+  </export>
+</package>

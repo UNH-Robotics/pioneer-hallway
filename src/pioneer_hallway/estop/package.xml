@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>pioneer_estop</name>
+  <name>estop</name>
   <version>0.0.1</version>
   <description>Emergency stop node for Pioneer 3DX</description>
 
