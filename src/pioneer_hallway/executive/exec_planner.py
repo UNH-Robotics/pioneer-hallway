@@ -24,6 +24,7 @@ from pioneer_hallway.srv import *
        remove the hardcoded values
 '''
 primitives = read_primitives(sys.argv[1])
+simulation_flag = sys.argv[2]
 
 pose = PoseWithCovarianceStamped()
 vels = (0,0)
@@ -50,14 +51,14 @@ Obstacle = namedtuple("Obstacle", "t x y cov")
 ObstacleDb = []
 
 def poseCallBack(data):
-  rospy.loginfo(rospy.get_caller_id() + " updating pose from acml")
-  pose = data.data.pose.pose
+  rospy.loginfo("updating pose from acml")
+  pose = data.pose.pose
   rospy.loginfo(pose)
 
 def velCallBack(data):
-  rospy.loginfo(rospy.get_call_id() + " updating velocities from cmd_vel")
-  xVel = data.data.linear.x
-  rotVel = data.data.angular.z
+  rospy.loginfo("updating velocities from cmd_vel")
+  xVel = data.linear.x
+  rotVel = data.angular.z
   vels = (xVel, rotVel)
  
 '''
@@ -102,52 +103,51 @@ def exec_control_pub(action):
  update these when we do forward projection 
  and/or when we look up the new state
 '''
-CurrentState = namedtuple("CurrentState", "x y lin rot head")
-CurrentState.x = 1024
-CurrentState.y = 2777
+CurrentState = namedtuple("CurrentState", "x y lin head")
+CurrentState.x = 0.0
+CurrentState.y = 0.0
 CurrentState.lin = 0.0
-CurrentState.rot = 0.0
 CurrentState.head = 0.0
 
 '''
  Sets the CurrentState to a new given state
  pos (x,y) linear rotational velocity
 '''
-def set_cur(x, y, lin, rot, head):
+def set_cur(x, y, lin, head):
     CurrentState.x = x
     CurrentState.y = y
     CurrentState.lin = lin
-    CurrentState.rot = rot
     CurrentState.head = head
 
 def update_lcur(msg):
   state = msg[1].rstrip().split(' ',4)
   print(state)
-  set_cur(state[0],state[1],state[2],state[3],state[4])
+  set_cur(state[0],state[1],state[2],state[3])
   rospy.loginfo("new updated lstate: " + print_cur_state())
 
 def update_cur(action):
-    str_index = action.rstrip()
+    str_index = action[0]
     rospy.loginfo("updating state with action: " + str_index)
     index_action = int(str_index[1:])
     cur_primitive = primitives[index_action]
-    xVel = vels[0]
-    rotVel = vels[1]
-    x = pose.pose.pose.position.x
+
+    x = pose.pose.pose.position.x 
     y = pose.pose.pose.position.y
     heading = toEuler(pose.pose.pose.orientation)
-    newState = cur_primitive.apply(x, y, xVel, rotVel, heading)
-    set_cur(newState[0], newState[1], vels[0] , vels[1], newState[2])
+    rospy.loginfo("update_cur: " + str(x) + " " + str(y) + " " + str(vels[0]) + " " + str(heading))
+    newState = cur_primitive.apply(x, y, vels[0], 0,  heading)
+
+    set_cur(newState[0], newState[1], vels[0], newState[2])
     rospy.loginfo("new updated state: " + print_cur_state())
     
 def print_cur_state():
     return str(CurrentState.x) + ' ' + str(CurrentState.y) + \
-        ' ' + str(CurrentState.lin) + ' ' + str(CurrentState.rot) + ' ' + str(CurrentState.head)
+        ' ' + str(CurrentState.lin) + ' ' + str(CurrentState.head)
 
     
 def print_cur_cstate():
     return str(CurrentState.x) + ',' + str(CurrentState.y) + \
-        ',' + str(CurrentState.lin) + ',' + str(CurrentState.rot) + ',' + str(CurrentState.head)
+        ',' + str(CurrentState.lin) + ',' + str(CurrentState.head)
 
 
 def set_new_goal(p, nbsr, x, y):
@@ -191,12 +191,12 @@ def send_msg_to_planner(p, nbsr):
         rospy.loginfo("plan msg: " + a + "\n") 
         rospy.loginfo("plan action: " + b + "\n")
         if a == None:
-          return (t, "a7")
+          return (t, ["a7"])
         else:
           return (t,b.split(' ',1))
     except:
         rospy.logerr("planner did not respond assuming no action")
-        return (time.time(), "a7")
+        return (time.time(), ["a7"])
 
 if __name__ == '__main__':
     # wait for services before starting up ...
@@ -204,19 +204,32 @@ if __name__ == '__main__':
     #rospy.wait_for_service('get_obsticles')
     # fork and create a child subprocess of the planner
     rospy.loginfo("Running Planner with 3s startup time...")
-    planner = Popen("./planner.sh",
+    planner = Popen(["./planner.sh", simulation_flag],
                                stdin=PIPE,
                                stdout=PIPE) 
+    
+     
     time.sleep(3)
     nbsr = NBSR(planner.stdout)
     # give time for the planner to initialize
     # the master clock for the planner
-    set_new_goal(planner, nbsr, 990, 2890) 
+    cur_map_goal = (0, 0)
+    sim_map_goal = (1.89, 3.21)
+    kings_map_goal = (-64.5, -39.8)
+
+    if simulation_flag == "-simulator":
+      cur_map_goal = sim_map_goal
+      set_cur(-1.97, -0.48, 0.0, 0.0)
+    else:
+      cur_map_goal = kings_map_goal
+      set_cur(-64.7, -44.1, 0.0, 0.0)
+    
+    set_new_goal(planner, nbsr, cur_map_goal[0], cur_map_goal[1]) 
     master_clock = time.time()
     cur_clock = time.time()
     try:
         while ((time.time() - cur_clock) < 0.250):
-           # send the msg to the planner store the time it took
+            #send the msg to the planner store the time it took
             cur_clock, action = send_msg_to_planner(planner, nbsr)
             cont_msg = action[0] + "," + print_cur_cstate() + "," + str(int(time.time() * 1000) + 250) + "\n"
             exec_control_pub(cont_msg)
