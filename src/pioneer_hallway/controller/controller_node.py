@@ -6,7 +6,14 @@ Desc: Controller node
 ---------------------- 
 Update by: Tianyi Gu
 update Date: Mar / 11 / 2017
-Desc: implement random control
+Desc: Implement model predictive control
+---------------------- 
+Update by: Tianyi Gu
+update Date: Mar / 27 / 2017
+Desc: 1.  update interface to cmd_vel_publisher node 
+          and disable_cmd_vel_publish service ( for emegency stop)
+      2.  update state from x, y, v, w, h, t to remove w
+      3.  update model predictive control to include motion primitive info
 """
 import sys
 sys.path.insert(0, "../../../doc/motionPrimitive/")
@@ -37,13 +44,13 @@ samplingNum = 200
 sampleScale = 2.0
 
 class State(object):
-    def __init__(self, x, y, v, w, h, t):
+    def __init__(self, x, y, v, h, t, w = 0):
         self.x = float(x)
         self.y = float(y)
         self.v = float(v)
-        self.w = float(w)
         self.h = float(h)
         self.t = t
+        self.w = float(w)
         
     def set_pose(self, x, y, h, t):
         self.x = float(x)
@@ -64,7 +71,7 @@ def executive_callback(data):
     strList = data.data.split(',')
     receivedAction = strList[0]
     receivedGoalState = State(strList[1], strList[2],strList[3],
-                              strList[4], strList[5],strList[6])
+                              strList[4], strList[5])
     #changePlan = strList[7]
 
 def executive_listener():
@@ -125,7 +132,7 @@ def amclpose_callback(data):
 
 def twist_callback(data):
     global currentState
-    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+    rospy.loginfo(rospy.get_caller_id() + 'Get latest twist info: \n' + 
                   "linear x: %.2f" % data.linear.x + "\n" + 
                   "linear y: %.2f" % data.linear.y+"\n"+
                   "linear z: %.2f" % data.linear.z+"\n"+
@@ -169,17 +176,44 @@ def sampling_based_controller(refAction, start, end, beginClock):
     print "get new action: ", twist.linear.x, twist.angular.z
     return twist
 
+def model_predictive_controller(refAction, start, end, endClock):
+    deltaT = endClock - time.time()
+    print "deltaT","%.2f" % deltaT
+    goalOffset = float('inf')
+    twist = Twist()
+    vCandidate = np.random.normal(start.v + refAction[0] * deltaT,
+                                  sampleScale, samplingNum)
+    wCandidate = np.random.normal(start.w + refAction[1] * deltaT,
+                                  sampleScale, samplingNum)
+    for i in range(samplingNum):
+        goalX = start.x + vCandidate[i] * deltaT * math.cos(
+            start.w + (wCandidate[i] * deltaT) / 2)
+        goalY = start.y + vCandidate[i] * deltaT * math.sin(
+            start.w + (wCandidate[i] * deltaT) / 2)
+        goalH = start.h + wCandidate[i] * deltaT
+        disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
+                        math.pow(goalY - end.y, 2.0))
+        disH = abs(goalH - end.h)
+        totalDis = positionWeight * disP + (1 - positionWeight) * disH
+        if totalDis < goalOffset:
+            goalOffset = totalDis
+            twist.linear.x = vCandidate[i]
+            twist.angular.z = wCandidate[i]
+    print "get new action: ", twist.linear.x, twist.angular.z
+    return twist
+
 def move():
     global receivedAction
     global receivedGoalState
     global changePlan
     global currentState
-    #here,we publish actions to the topic 'cmd_vel'
-    pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+    #here,we publish actions to the topic 'cmd_vel_request'
+    pub = rospy.Publisher('cmd_vel_request', Twist, queue_size=10)
     # The local controller run at 60hz
     rate = rospy.Rate(60)
     while receivedAction != 'NotReceived' and receivedGoalState != None:
         beginClock = time.time()
+        endClock = beginClock + duration
         currentAction = receivedAction
         goalState = receivedGoalState
         receivedAction = 'NotReceived'
@@ -188,10 +222,14 @@ def move():
             if changePlan:
                 changePlan = 0
                 break
-            motion= sampling_based_controller(motions[currentAction],
-                                              currentState,
-                                              goalState,
-                                              beginClock)
+            # motion= sampling_based_controller(motions[currentAction],
+            #                                   currentState,
+            #                                   goalState,
+            #                                   beginClock)
+            motion= model_predictive_controller(motions[currentAction],
+                                                currentState,
+                                                goalState,
+                                                endClock)
             rospy.loginfo("controller publish action: \n" + 
                           "linear x: %.2f" % (motion.linear.x) + "\n" + 
                           "linear y: %.2f" % motion.linear.y+"\n"+
@@ -203,7 +241,7 @@ def move():
             pub.publish(motion)
             rate.sleep()
     rospy.logerr("Not Received Action!")
-    disable_motors = rospy.ServiceProxy('RosAria/disable_motors', Empty)
+    disable_motors = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
     disable_motors.call()
 
 def init_motions():
@@ -227,7 +265,7 @@ def wait_for_first_action():
 if __name__ == '__main__':
     init_motions();
     rospy.init_node('controller_node', anonymous=True)
-    rospy.wait_for_service('RosAria/disable_motors')
+    rospy.wait_for_service('disable_cmd_vel_publisher')
     execListernerThread = Thread(target=executive_listener, args=())
     poseListernerThread = Thread(target=pose_listener, args=())
     controllerPublisherThread = Thread(target=move, args=())
