@@ -120,10 +120,14 @@ def set_cur(x, y, lin, head):
     CurrentState.head = head
 
 def update_lcur(msg):
-  state = msg[1].rstrip().split(' ',4)
-  print(state)
-  set_cur(state[0],state[1],state[2],state[3])
-  rospy.loginfo("new updated lstate: " + print_cur_state())
+  rospy.loginfo("update_cur_msg: " + str(len(msg)))
+  if len(msg) == 1:
+    rospy.logwarn("planner reporting we're at the goal")
+  else:
+    state = msg[1].rstrip().split(' ',4)
+    print(state)
+    set_cur(state[0],state[1],state[2],state[3])
+    rospy.loginfo("new updated lstate: " + print_cur_state())
 
 def update_cur(action):
     str_index = action[0]
