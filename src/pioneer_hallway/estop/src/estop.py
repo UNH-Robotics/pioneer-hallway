@@ -18,7 +18,7 @@ predictedFramePub = None
 cmdVelPub = None
 
 #value in seconds
-deltaT = 4.5
+deltaT = 4
 
 #values in meters
 robotLength = 0.455
@@ -127,6 +127,7 @@ def laserCallback(sensor_data):
 			disablePublisher()
 			rospy.loginfo('Possible collision detected.')
 			subprocess.call(['/usr/bin/canberra-gtk-play','--id','suspend-error'])
+			#possible sound files are in /usr/share/sounds/freedesktop/stereo
 			exit()
 	
 	#publish polygons
@@ -140,7 +141,7 @@ def estop():
 	global currentFramePub
 	global cmdVelPub	
 	rospy.init_node('pioneer_estop', anonymous=False)
-	laserTopic = rospy.get_param("laserTopic", "lms5XX_1_laserscan")
+	laserTopic = rospy.get_param("laserTopic", "RosAria/lms5XX_1_laserscan")
 	rospy.wait_for_service('disable_cmd_vel_publisher')
 	rospy.Subscriber(laserTopic, LaserScan, laserCallback)
 	rospy.Subscriber('RosAria/pose', Odometry, rosAriaPoseCallback)
