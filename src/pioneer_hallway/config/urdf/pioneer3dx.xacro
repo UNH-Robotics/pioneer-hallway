@@ -177,7 +177,7 @@
   	<limit effort="1000" velocity="1000" k_velocity="0" />
   	<joint_properties damping="0.0" friction="0.0" />-->
 		<parent link="base_link"/>
-		<child link="left_wheel"/>
+		<child link="right_wheel"/>
 	</joint>
 
 	<link name="left_wheel">
@@ -233,7 +233,7 @@
   	<limit effort="1000" velocity="1000" k_velocity="0" />
   	<joint_properties damping="0.0" friction="0.0" />-->
 		<parent link="base_link"/>
-		<child link="right_wheel"/>
+		<child link="left_wheel"/>
 	</joint>
 
 	<link name="right_wheel">

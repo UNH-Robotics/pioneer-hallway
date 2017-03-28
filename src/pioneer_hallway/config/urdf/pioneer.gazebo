@@ -38,7 +38,7 @@
       <wheelAcceleration>0</wheelAcceleration>
       <wheelTorque>5</wheelTorque>
       <rosDebugLevel>na</rosDebugLevel>
-      <legacyMode>false</legacyMode>
+      <!--legacyMode>false</legacyMode-->
     </plugin>
   </gazebo>
   <!--<gazebo>

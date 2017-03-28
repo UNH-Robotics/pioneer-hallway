@@ -1,7 +1,6 @@
 <launch>
 	<remap from="odom" to="RosAria/pose" />
 	<param name="laserTopic" value="base_scan" />
-	<param name="estopSoundCommand" value="/usr/bin/canberra-gtk-play --id='beep'" />
 	<param name="amcl/initial_pose_x" value="-2.0" />
 	<param name="amcl/initial_pose_y" value="-0.5" />
 	<param name="amcl/initial_pose_a" value="0" />

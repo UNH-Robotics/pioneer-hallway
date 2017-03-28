@@ -12,7 +12,6 @@ from std_srvs.srv import Empty
 #global variables
 rosAriaPose = Odometry()
 amclPose = PoseWithCovarianceStamped()
-soundCommand = None
 disablePublisher = None
 currentFramePub = None
 predictedFramePub = None
@@ -127,7 +126,7 @@ def laserCallback(sensor_data):
 		    laserDistance <= distBack):
 			disablePublisher()
 			rospy.loginfo('Possible collision detected.')
-			subprocess.call(['/usr/bin/canberra-gtk-play','--id','beep'])
+			subprocess.call(['/usr/bin/canberra-gtk-play','--id','suspend-error'])
 			exit()
 	
 	#publish polygons
@@ -140,10 +139,8 @@ def estop():
 	global predictedFramePub
 	global currentFramePub
 	global cmdVelPub	
-	global soundCommand
 	rospy.init_node('pioneer_estop', anonymous=False)
 	laserTopic = rospy.get_param("laserTopic", "lms5XX_1_laserscan")
-	soundCommand = rospy.get_param("estopSoundCommand", "")
 	rospy.wait_for_service('disable_cmd_vel_publisher')
 	rospy.Subscriber(laserTopic, LaserScan, laserCallback)
 	rospy.Subscriber('RosAria/pose', Odometry, rosAriaPoseCallback)
