@@ -118,7 +118,7 @@ def exec_control_pub(action):
     pub.publish(action)
 
 def update_lcur(msg):
-  rospy.loginfo("update_cur_msg: " + str(len(msg)))
+  #rospy.loginfo("update_cur_msg: " + str(len(msg)))
   if len(msg) == 1:
     rospy.logwarn("planner reporting we're at the goal")
   else:
@@ -132,7 +132,7 @@ def update_lcur(msg):
     poseY = state[1]
     vel = state[2]
     poseHeading = state[3]
-    rospy.loginfo("new updated lstate: " + print_cur_state())
+    #rospy.loginfo("new updated lstate: " + print_cur_state())
 
 def update_cur(action):
     #rospy.loginfo("starting update_cur: " + print_cur_state())
@@ -193,8 +193,8 @@ def send_msg_to_planner(p, nbsr):
     try:
         (t,a) = (time.time(), nbsr.readline(0.05))
         (t2,b) = (t, nbsr.readline(0.10))
-        rospy.loginfo("plan msg: " + a + "\n") 
-        rospy.loginfo("plan action: " + b + "\n")
+        #rospy.loginfo("plan msg: " + a + "\n") 
+        #rospy.loginfo("plan action: " + b + "\n")
         if a == None:
           return (t, ["a7"])
         else:
