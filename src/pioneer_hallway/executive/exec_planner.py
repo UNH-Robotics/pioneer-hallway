@@ -42,6 +42,7 @@ poseY = 0.0
 poseHeading = 0.0
 vel = 0.0
 goal_is_set = True
+planner_finished = True
 
 ''' 
  TODO: find out the msg type and read
@@ -86,7 +87,7 @@ def velCallBack(data):
         obst_track - assign our callback to the tracker
 '''
 rospy.init_node('executive', anonymous=True)
-rate = rospy.Rate(10)
+rate = rospy.Rate(60)
 pub = rospy.Publisher('controller_msg', String, queue_size=1)
 obst_tracker = rospy.ServiceProxy('get_obsticles', GetObsticles)
 amcl_pose = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, poseCallBack)
@@ -100,7 +101,11 @@ def toEuler(orient):
     orient.w)
   euler = tf.transformations.euler_from_quaternion(quaternion)
   if euler[0] == 0 and euler[1] == 0:
-    return euler[2]
+    yaw = euler[2]
+    yaw_degree = (yaw * 100.0) / math.pi
+    if yaw_degree < 0.0:
+      yaw_degree += 360.0
+    return math.radians(yaw_degree)
   return None
 
 '''
@@ -135,14 +140,14 @@ def update_lcur(msg):
     #rospy.loginfo("new updated lstate: " + print_cur_state())
 
 def update_cur(action):
-    #rospy.loginfo("starting update_cur: " + print_cur_state())
+    rospy.loginfo("starting update_cur: " + print_cur_state())
     str_index = action[0]
-    #rospy.loginfo("updating state with action: " + str_index)
+    rospy.loginfo("updating state with action: " + str_index)
     index_action = int(str_index[1:])
     cur_primitive = primitives[index_action]
-    #rospy.loginfo("update_cur: " + str(poseX) + " " + str(poseY) + " " + str(vel) + " " + str(poseHeading))
+    rospy.loginfo("update_cur: " + str(poseX) + " " + str(poseY) + " " + str(vel) + " " + str(poseHeading))
     newState = cur_primitive.apply(poseX, poseY, vel, 0,  poseHeading)
-    #rospy.loginfo("new updated state: " + print_cur_state())
+    rospy.loginfo("new updated state: " + print_cur_state())
     
 def print_cur_state():
     return str(poseX) + ' ' + str(poseY) + \
@@ -182,25 +187,33 @@ def send_goal_to_planner(p, nbsr, x, y):
     return None
 
 def send_msg_to_planner(p, nbsr):
-    msg = "STATE\n" + str(int(time.time() * 1000) + 250) + ' ' + print_cur_state() + '\n'
-    for obst in ObstacleDb:
-        msg = msg + str(obst.x) + ' ' + str(obst.y) + '\n'
-    msg = msg + "END\n"
-    #rospy.loginfo("sending new state to plan to: " + msg)
-    p.stdin.write(msg)
+    if planner_finished:
+      msg = "STATE\n" + str(int(time.time() * 1000) + 250) + ' ' + print_cur_state() + '\n'
+      for obst in ObstacleDb:
+          msg = msg + str(obst.x) + ' ' + str(obst.y) + '\n'
+      msg = msg + "END\n"
+      #rospy.loginfo("sending new state to plan to: " + msg)
+      p.stdin.write(msg)
     # time.sleep(0.25)
     # have to wait for the process to respond
     try:
-        (t,a) = (time.time(), nbsr.readline(0.05))
-        (t2,b) = (t, nbsr.readline(0.10))
+        (t,a) = (time.time(), nbsr.readline(0.150))
+        (t2,b) = (t, nbsr.readline(0.0))
         #rospy.loginfo("plan msg: " + a + "\n") 
         #rospy.loginfo("plan action: " + b + "\n")
         if a == None:
+          global planner_finished
+          planner_finished = False
+          rospy.logerr("planner did not respond assuming no action - planner finished? " + str(planner_finished))
           return (t, ["a7"])
         else:
+          global planner_finished
+          planner_finished = True
           return (t,b.split(' ',1))
     except:
-        rospy.logerr("planner did not respond assuming no action")
+        global planner_finished
+        planner_finished = False
+        rospy.logerr("planner did not respond assuming no action - planner finished? " + str(planner_finished))
         return (time.time(), ["a7"])
 
 if __name__ == '__main__':
@@ -239,7 +252,7 @@ if __name__ == '__main__':
     master_clock = time.time()
     cur_clock = time.time()
     try:
-        while ((time.time() - cur_clock) < 0.30):
+        while ((time.time() - cur_clock) < 1.0):
             #send the msg to the planner store the time it took
             cur_clock, action = send_msg_to_planner(planner, nbsr)
             cont_msg = action[0] + "," + print_cur_cstate() + "," + str(int(time.time() * 1000) + 250) + "\n"
@@ -248,7 +261,8 @@ if __name__ == '__main__':
             #rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             #time.sleep((time.time() - cur_clock))
             master_clock = cur_clock
-            time.sleep(0.10)
+            time.sleep(0.20)
+            rospy.logerr(str(time.time() - cur_clock))
         raise rospy.ROSException("ESTOP")
     except (rospy.ROSInterruptException, rospy.ROSException):
       rospy.logerr("ESTOP - iteration took too long: " + str(time.time() - cur_clock))
