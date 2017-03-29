@@ -14,6 +14,11 @@ sys.path.insert(0, "../../../doc/motionPrimitive/")
 from primutils import Primitive, read_primitives
 from pioneer_hallway.srv import *
 
+'''
+ used to keep track of current state
+ update these when we do forward projection 
+ and/or when we look up the new state
+'''
 
 '''
  Read the primitives from the file
@@ -26,9 +31,16 @@ from pioneer_hallway.srv import *
 primitives = read_primitives(sys.argv[1])
 simulation_flag = sys.argv[2]
 
-pose = PoseWithCovarianceStamped()
-vels = (0,0)
+global poseX
+global poseY
+global poseHeading
+global vel
+global goal_is_set
 
+poseX = 0.0
+poseY = 0.0
+poseHeading = 0.0
+vel = 0.0
 goal_is_set = True
 
 ''' 
@@ -51,15 +63,22 @@ Obstacle = namedtuple("Obstacle", "t x y cov")
 ObstacleDb = []
 
 def poseCallBack(data):
-  rospy.loginfo("updating pose from acml")
-  pose = data.pose.pose
-  rospy.loginfo(pose)
+  #rospy.loginfo("updating pose from acml")
+  pose = data
+  global poseX 
+  poseX = pose.pose.pose.position.x 
+  global poseY 
+  poseY = pose.pose.pose.position.y
+  global poseHeading 
+  poseHeading = toEuler(pose.pose.pose.orientation)
+  #rospy.logwarn("poseCallBack: " + str(poseX) + " " + str(poseY) + " " + str(poseHeading))
+  #rospy.loginfo(pose)
 
 def velCallBack(data):
-  rospy.loginfo("updating velocities from cmd_vel")
-  xVel = data.linear.x
-  rotVel = data.angular.z
-  vels = (xVel, rotVel)
+  #rospy.logwarn("updating velocities from cmd_vel " + print_cur_state())
+  global vel
+  vel = data.linear.x
+  
  
 '''
  Initialize our ROS nodes here -
@@ -95,29 +114,8 @@ def obstacles(dt, steps):
         rospy.logerr("Service call has failed %s"%e)
 
 def exec_control_pub(action):
-    rospy.loginfo("ecp: " + action)
+    #rospy.loginfo("ecp: " + action)
     pub.publish(action)
-
-'''
- used to keep track of current state
- update these when we do forward projection 
- and/or when we look up the new state
-'''
-CurrentState = namedtuple("CurrentState", "x y lin head")
-CurrentState.x = 0.0
-CurrentState.y = 0.0
-CurrentState.lin = 0.0
-CurrentState.head = 0.0
-
-'''
- Sets the CurrentState to a new given state
- pos (x,y) linear rotational velocity
-'''
-def set_cur(x, y, lin, head):
-    CurrentState.x = x
-    CurrentState.y = y
-    CurrentState.lin = lin
-    CurrentState.head = head
 
 def update_lcur(msg):
   rospy.loginfo("update_cur_msg: " + str(len(msg)))
@@ -126,32 +124,34 @@ def update_lcur(msg):
   else:
     state = msg[1].rstrip().split(' ',4)
     print(state)
-    set_cur(state[0],state[1],state[2],state[3])
+    global poseX
+    global poseY
+    global vel
+    global poseHeading
+    poseX = state[0]
+    poseY = state[1]
+    vel = state[2]
+    poseHeading = state[3]
     rospy.loginfo("new updated lstate: " + print_cur_state())
 
 def update_cur(action):
+    #rospy.loginfo("starting update_cur: " + print_cur_state())
     str_index = action[0]
-    rospy.loginfo("updating state with action: " + str_index)
+    #rospy.loginfo("updating state with action: " + str_index)
     index_action = int(str_index[1:])
     cur_primitive = primitives[index_action]
-
-    x = pose.pose.pose.position.x 
-    y = pose.pose.pose.position.y
-    heading = toEuler(pose.pose.pose.orientation)
-    rospy.loginfo("update_cur: " + str(x) + " " + str(y) + " " + str(vels[0]) + " " + str(heading))
-    newState = cur_primitive.apply(x, y, vels[0], 0,  heading)
-
-    set_cur(newState[0], newState[1], vels[0], newState[2])
-    rospy.loginfo("new updated state: " + print_cur_state())
+    #rospy.loginfo("update_cur: " + str(poseX) + " " + str(poseY) + " " + str(vel) + " " + str(poseHeading))
+    newState = cur_primitive.apply(poseX, poseY, vel, 0,  poseHeading)
+    #rospy.loginfo("new updated state: " + print_cur_state())
     
 def print_cur_state():
-    return str(CurrentState.x) + ' ' + str(CurrentState.y) + \
-        ' ' + str(CurrentState.lin) + ' ' + str(CurrentState.head)
+    return str(poseX) + ' ' + str(poseY) + \
+        ' ' + str(vel) + ' ' + str(poseHeading)
 
     
 def print_cur_cstate():
-    return str(CurrentState.x) + ',' + str(CurrentState.y) + \
-        ',' + str(CurrentState.lin) + ',' + str(CurrentState.head)
+    return str(poseX) + ',' + str(poseY) + \
+        ',' + str(vel) + ',' + str(poseHeading)
 
 
 def set_new_goal(p, nbsr, x, y):
@@ -161,6 +161,7 @@ def set_new_goal(p, nbsr, x, y):
     rospy.logwarn("waiting on planner to update goal")
     out = nbsr.readline(0.25)
   rospy.loginfo("planner fired up and ready to go")
+  global goal_is_set
   goal_is_set = True
 
 def send_goal_to_planner(p, nbsr, x, y):
@@ -185,13 +186,13 @@ def send_msg_to_planner(p, nbsr):
     for obst in ObstacleDb:
         msg = msg + str(obst.x) + ' ' + str(obst.y) + '\n'
     msg = msg + "END\n"
-    rospy.loginfo("sending new state to plan to: " + msg)
+    #rospy.loginfo("sending new state to plan to: " + msg)
     p.stdin.write(msg)
-    time.sleep(0.25)
+    # time.sleep(0.25)
     # have to wait for the process to respond
     try:
-        (t,a) = (time.time(), nbsr.readline(0.20))
-        (t2,b) = (t, nbsr.readline(0.20))
+        (t,a) = (time.time(), nbsr.readline(0.05))
+        (t2,b) = (t, nbsr.readline(0.10))
         rospy.loginfo("plan msg: " + a + "\n") 
         rospy.loginfo("plan action: " + b + "\n")
         if a == None:
@@ -223,27 +224,34 @@ if __name__ == '__main__':
 
     if simulation_flag == "-simulator":
       cur_map_goal = sim_map_goal
-      set_cur(-1.97, -0.48, 0.0, 0.0)
+      global poseX
+      global poseY
+      poseX = -1.97
+      poseY = -0.48
     else:
       cur_map_goal = kings_map_goal
-      set_cur(-64.7, -44.1, 0.0, 0.0)
+      global poseX
+      global poseY
+      poseX = -64.7
+      poseY = -44.1
     
     set_new_goal(planner, nbsr, cur_map_goal[0], cur_map_goal[1]) 
     master_clock = time.time()
     cur_clock = time.time()
     try:
-        while ((time.time() - cur_clock) < 0.250):
+        while ((time.time() - cur_clock) < 0.30):
             #send the msg to the planner store the time it took
             cur_clock, action = send_msg_to_planner(planner, nbsr)
             cont_msg = action[0] + "," + print_cur_cstate() + "," + str(int(time.time() * 1000) + 250) + "\n"
             exec_control_pub(cont_msg)
-            update_lcur(action)
-            rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
+            update_cur(action)
+            #rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             #time.sleep((time.time() - cur_clock))
             master_clock = cur_clock
+            time.sleep(0.10)
         raise rospy.ROSException("ESTOP")
     except (rospy.ROSInterruptException, rospy.ROSException):
-      rospy.logerr("ESTOP")
+      rospy.logerr("ESTOP - iteration took too long: " + str(time.time() - cur_clock))
 
 
 
