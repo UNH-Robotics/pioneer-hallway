@@ -37,6 +37,10 @@ global poseHeading
 global vel
 global goal_is_set
 
+global planner_return_state
+
+planner_return_state = (0.0, 0.0, 0.0, 0.0)
+
 poseX = 0.0
 poseY = 0.0
 poseHeading = 0.0
@@ -101,11 +105,7 @@ def toEuler(orient):
     orient.w)
   euler = tf.transformations.euler_from_quaternion(quaternion)
   if euler[0] == 0 and euler[1] == 0:
-    yaw = euler[2]
-    yaw_degree = (yaw * 100.0) / math.pi
-    if yaw_degree < 0.0:
-      yaw_degree += 360.0
-    return math.radians(yaw_degree)
+    return euler[2]
   return None
 
 '''
@@ -120,6 +120,7 @@ def obstacles(dt, steps):
 
 def exec_control_pub(action):
     #rospy.loginfo("ecp: " + action)
+    
     pub.publish(action)
 
 def update_lcur(msg):
@@ -142,12 +143,16 @@ def update_lcur(msg):
 def update_cur(action):
     rospy.loginfo("starting update_cur: " + print_cur_state())
     str_index = action[0]
+    state = (str(poseX), str(poseY), str(vel), str(poseHeading))
+    if len(action) > 1:
+      state = action[1].rstrip().split(' ', 4)
     rospy.loginfo("updating state with action: " + str_index)
     index_action = int(str_index[1:])
     cur_primitive = primitives[index_action]
-    rospy.loginfo("update_cur: " + str(poseX) + " " + str(poseY) + " " + str(vel) + " " + str(poseHeading))
-    newState = cur_primitive.apply(poseX, poseY, vel, 0,  poseHeading)
-    rospy.loginfo("new updated state: " + print_cur_state())
+    rospy.loginfo("update_cur: " + str(state[0]) + " " + str(state[1]) + " " + str(state[2]) + " " + str(state[3]))
+    global planner_return_state
+    planner_return_state = (state[0], state[1], state[2], state[3]) 
+    rospy.loginfo("new updated state: " + str(planner_return_state[0]) + " " + str(planner_return_state[1]) + " " + str(planner_return_state[2]) + " " + str(planner_return_state[3]))
     
 def print_cur_state():
     return str(poseX) + ' ' + str(poseY) + \
@@ -194,10 +199,11 @@ def send_msg_to_planner(p, nbsr):
       msg = msg + "END\n"
       #rospy.loginfo("sending new state to plan to: " + msg)
       p.stdin.write(msg)
+      p.stdin.flush()
     # time.sleep(0.25)
     # have to wait for the process to respond
     try:
-        (t,a) = (time.time(), nbsr.readline(0.150))
+        (t,a) = (time.time(), nbsr.readline(0.250))
         (t2,b) = (t, nbsr.readline(0.0))
         #rospy.loginfo("plan msg: " + a + "\n") 
         #rospy.loginfo("plan action: " + b + "\n")
@@ -224,7 +230,9 @@ if __name__ == '__main__':
     rospy.loginfo("Running Planner with 3s startup time...")
     planner = Popen(["./planner.sh", simulation_flag],
                                stdin=PIPE,
-                               stdout=PIPE) 
+                               stdout=PIPE,
+                               bufsize=1,
+                               universal_newlines=True) 
     
      
     time.sleep(3)
@@ -255,13 +263,13 @@ if __name__ == '__main__':
         while ((time.time() - cur_clock) < 1.0):
             #send the msg to the planner store the time it took
             cur_clock, action = send_msg_to_planner(planner, nbsr)
-            cont_msg = action[0] + "," + print_cur_cstate() + "," + str(int(time.time() * 1000) + 250) + "\n"
-            exec_control_pub(cont_msg)
             update_cur(action)
+            cont_msg = action[0] + "," + str(planner_return_state[0]) + "," + str(planner_return_state[1]) + "," + str(planner_return_state[2]) + "," + str(planner_return_state[2]) + "," + str(int(time.time() * 1000) + 250) + "\n"
+            exec_control_pub(cont_msg)
             #rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             #time.sleep((time.time() - cur_clock))
             master_clock = cur_clock
-            time.sleep(0.20)
+            #time.sleep(0.20)
             rospy.logerr(str(time.time() - cur_clock))
         raise rospy.ROSException("ESTOP")
     except (rospy.ROSInterruptException, rospy.ROSException):
