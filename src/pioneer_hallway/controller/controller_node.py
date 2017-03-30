@@ -22,6 +22,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseStamped
 from std_srvs.srv import Empty
 from threading import Thread
 from primutils import Primitive, read_primitives, read_primitives_with_duration
@@ -32,6 +33,8 @@ from nav_msgs.msg import Odometry
 import numpy as np
 import math
 import time
+from datetime import datetime
+from nav_msgs.msg import Path
 
 receivedAction = 'NotReceived'
 receivedGoalState = None
@@ -42,6 +45,11 @@ changePlan = 0
 positionWeight = 0.9
 samplingNum = 200
 sampleScale = 2.0
+pathFileName = None
+trajectoryFileName = None
+controllerLogName = None
+plannerPath = None
+plannerPathPub = None
 
 class State(object):
     def __init__(self, x, y, v, h, t, w = 0):
@@ -67,12 +75,16 @@ def executive_callback(data):
     global receivedAction
     global receivedGoalState
     global changePlan
+    global plannerPath
+    global plannerPathPub
     rospy.loginfo(rospy.get_caller_id() + 'Executive give me the motion and state:\n%s',data.data)
     strList = data.data.split(',')
     receivedAction = strList[0]
     receivedGoalState = State(strList[1], strList[2],strList[3],
                               strList[4], strList[5])
     #changePlan = strList[7]
+    # with open(pathFileName, 'a') as f:
+    #     f.write(data.data)
 
 def executive_listener():
     rospy.Subscriber('controller_msg', String, executive_callback)
@@ -129,6 +141,10 @@ def amclpose_callback(data):
                           data.pose.pose.position.y,
                           h,
                           time.time())
+    # with open(trajectoryFileName, 'a') as f:
+    #     f.write( "%.2f" %data.pose.pose.position.x + "," +
+    #              "%.2f" %data.pose.pose.position.y + "," + 
+    #              "%.2f" %h + '\n')
 
 def twist_callback(data):
     global currentState
@@ -173,13 +189,15 @@ def sampling_based_controller(refAction, start, end, beginClock):
             goalOffset = totalDis
             twist.linear.x = vCandidate[i]
             twist.angular.z = wCandidate[i]
-    print "get new action: ", twist.linear.x, twist.angular.z
+    print "get new action to: ", end.x, end.y, "\naction: ", twist.linear.x, twist.angular.z
     return twist
 
 def model_predictive_controller(refAction, start, end, endClock):
     deltaT = endClock - time.time()
     print "deltaT","%.2f" % deltaT
     goalOffset = float('inf')
+    goalX_est = 0
+    goalY_est = 0
     twist = Twist()
     vCandidate = np.random.normal(start.v + refAction[0] * deltaT,
                                   sampleScale, samplingNum)
@@ -199,7 +217,34 @@ def model_predictive_controller(refAction, start, end, endClock):
             goalOffset = totalDis
             twist.linear.x = vCandidate[i]
             twist.angular.z = wCandidate[i]
-    print "get new action: ", twist.linear.x, twist.angular.z
+            goalX_est = goalX
+            goalY_est = goalY
+    print "get new action to: ", end.x, end.y, "\naction: ", twist.linear.x, twist.angular.z
+    # print "\nmore info: %.2f" %twist.linear.x , "," ,
+    # "%.2f" %twist.angular.z , "," ,
+    # "%.2f" %start.v , ", " ,
+    # "%.2f" %start.w , ", " ,
+    # "%.2f" %refAction[0], ", " ,
+    # "%.2f" %refAction[1], ", " ,
+    # "%.2f" %start.x , ", " ,
+    # "%.2f" %start.y , ", " ,
+    # "%.2f" %goal.x , ", " ,
+    # "%.2f" %goal.y , ", " ,
+    # "%.2f" %goalX_est , ", " ,
+    # "%.2f" %goalY_est , '\n'
+    # with open(controllerLogName, 'a') as f:
+    #     f.write( "%.2f" %twist.linear.x + "," +
+    #              "%.2f" %twist.angular.z + "," +
+    #              "%.2f" %start.v + ", " +
+    #              "%.2f" %start.w + ", " +
+    #              "%.2f" %refAction[0]+ ", " +
+    #              "%.2f" %refAction[1]+ ", " +
+    #              "%.2f" %start.x + ", " +
+    #              "%.2f" %start.y + ", " +
+    #              "%.2f" %goal.x + ", " +
+    #              "%.2f" %goal.y + ", " +
+    #              "%.2f" %goalX_est + ", " +
+    #              "%.2f" %goalY_est + '\n')
     return twist
 
 def move():
@@ -218,6 +263,13 @@ def move():
         goalState = receivedGoalState
         receivedAction = 'NotReceived'
         receivedGoalState = None
+        pose = PoseStamped()
+        pose.pose.position.x = goalState.x
+        pose.pose.position.y = goalState.y
+        plannerPath.poses.append(pose)
+        plannerPath.header.stamp = rospy.Time.now()
+        plannerPathPub.publish(plannerPath)
+        print len(plannerPath.poses)
         while((time.time() - beginClock) <= duration):
             if changePlan:
                 changePlan = 0
@@ -230,19 +282,19 @@ def move():
                                                 currentState,
                                                 goalState,
                                                 endClock)
-            rospy.loginfo("controller publish action: \n" + 
-                          "linear x: %.2f" % (motion.linear.x) + "\n" + 
-                          "linear y: %.2f" % motion.linear.y+"\n"+
-                          "linear z: %.2f" % motion.linear.z+"\n"+
-                          "angular x: %.2f" % motion.angular.x+"\n"+
-                          "angular y: %.2f" % motion.angular.y+"\n"+
-                          "angular z: %.2f" % motion.angular.z+"\n" +
-                          "duration: " + str(duration))
+            # rospy.loginfo("controller publish action: \n" + 
+            #               "linear x: %.2f" % (motion.linear.x) + "\n" + 
+            #               "linear y: %.2f" % motion.linear.y+"\n"+
+            #               "linear z: %.2f" % motion.linear.z+"\n"+
+            #               "angular x: %.2f" % motion.angular.x+"\n"+
+            #               "angular y: %.2f" % motion.angular.y+"\n"+
+            #               "angular z: %.2f" % motion.angular.z+"\n" +
+            #               "duration: " + str(duration))
             pub.publish(motion)
             rate.sleep()
     rospy.logerr("Not Received Action!")
     disable_motors = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
-    disable_motors.call()
+    #disable_motors.call()
 
 def init_motions():
     global duration
@@ -254,22 +306,39 @@ def init_motions():
     for i in filterMotions:
         motions[i[0]].append(i[1])
         motions[i[0]].append(i[2])
+        
+def init_path_output():
+    # global pathFileName
+    # global trajectoryFileName
+    # suffix = datetime.now().strftime("%m%d%Y_%H%M%S") 
+    # pathFileName = "path_" + suffix + ".co"
+    # trajectoryFileName = "trajectory_" + suffix + ".co"
+    # controllerLogName = "ctrl_" + suffix + ".log"
+    global plannerPathPub
+    global plannerPath
+    plannerPathPub = rospy.Publisher('planner_path_publisher', Path, queue_size=10)
+    plannerPath = Path()
+    plannerPath.header.frame_id = "map"
+    
 
 def wait_for_first_action():
     #sleep until received the first action from the executive
     global receivedAction
     while receivedAction == 'NotReceived':
         rospy.loginfo("wait for the first action from the executive")
-        rospy.sleep(rospy.Duration(1))  
+        rospy.sleep(rospy.Duration(0.2))  
 
 if __name__ == '__main__':
-    init_motions();
+    init_motions()
+    init_path_output()
     rospy.init_node('controller_node', anonymous=True)
     rospy.wait_for_service('disable_cmd_vel_publisher')
     execListernerThread = Thread(target=executive_listener, args=())
     poseListernerThread = Thread(target=pose_listener, args=())
     controllerPublisherThread = Thread(target=move, args=())
-    
+
+    #poseListernerThread.setDaemon(True)
+    #execListernerThread.setDaemon(True)
     poseListernerThread.start()
     execListernerThread.start()
     wait_for_first_action()   
