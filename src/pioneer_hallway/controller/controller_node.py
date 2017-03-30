@@ -254,6 +254,7 @@ def move():
     global currentState
     #here,we publish actions to the topic 'cmd_vel_request'
     pub = rospy.Publisher('cmd_vel_request', Twist, queue_size=10)
+    #pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     # The local controller run at 60hz
     rate = rospy.Rate(60)
     while receivedAction != 'NotReceived' and receivedGoalState != None:
@@ -294,7 +295,7 @@ def move():
             rate.sleep()
     rospy.logerr("Not Received Action!")
     disable_motors = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
-    #disable_motors.call()
+    disable_motors.call()
 
 def init_motions():
     global duration
@@ -326,7 +327,7 @@ def wait_for_first_action():
     global receivedAction
     while receivedAction == 'NotReceived':
         rospy.loginfo("wait for the first action from the executive")
-        rospy.sleep(rospy.Duration(0.2))  
+        rospy.sleep(rospy.Duration(0.05))  
 
 if __name__ == '__main__':
     init_motions()
