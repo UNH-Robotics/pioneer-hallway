@@ -1,21 +1,28 @@
 #!/usr/bin/env python
 
 import rospy
+import roslib
 import math
+from tf import TransformListener, transformations
 import subprocess
-from sensor_msgs.msg import LaserScan
+import numpy as np
+from sensor_msgs.msg import LaserScan, PointCloud
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped, Point32
-from geometry_msgs.msg import Twist, Quaternion, PolygonStamped
+from geometry_msgs.msg import Quaternion, PolygonStamped, Twist
 from std_srvs.srv import Empty
 
 #global variables
 rosAriaPose = Odometry()
 amclPose = PoseWithCovarianceStamped()
 disablePublisher = None
+testCloudPub = None
 currentFramePub = None
 predictedFramePub = None
 cmdVelPub = None
+
+#used in rotations
+frame = 'map'
 
 #value in seconds
 deltaT = 4
@@ -25,9 +32,10 @@ robotLength = 0.455
 robotWidth = 0.381
 robotLCushion = 0.16
 robotWCushion = 0.12
-frame = 'map'
 robotLengthFromCenter = (robotLength + robotLCushion) / 2
 robotWidthFromCenter = (robotWidth + robotWCushion) / 2
+sonarOffset = -0.198 #value grabbed from pioneer3dx.xacro
+laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
 
 #calculates the distance between a point and a line
 #lineEnd and lineStart define the end and start points of the line
@@ -35,6 +43,13 @@ robotWidthFromCenter = (robotWidth + robotWCushion) / 2
 def calculateDistance(lineEnd, lineStart, point):
 	distance = abs((lineEnd.y - lineStart.y) * point.x - (lineEnd.x - lineStart.x) * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x) / pow(pow(lineEnd.y - lineStart.y,2) + pow(lineEnd.x - lineStart.x,2), 1/2)
 	return distance
+
+#calculates the distance between two points
+def calculateEuclideanDistance(p1, p2):
+	return sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
+
+def polar_to_euclidean( angles, ranges ):
+    return [ [ np.cos(theta)*r, np.sin(theta)*r ] for theta, r in zip( angles, ranges ) ]
 
 #rotates a point given a quaternion
 #pin is the point that will be rotated
@@ -55,8 +70,7 @@ def amclPoseCallback(pose):
 	global amclPose
 	amclPose = pose
 
-#predict collisions and stops the motors if necessary
-def laserCallback(sensor_data):
+def calculatePolygons():
 	#get current pose
 	currPose = amclPose.pose.pose
 	currTwist = rosAriaPose.twist.twist
@@ -113,42 +127,127 @@ def laserCallback(sensor_data):
 	polyPred.polygon.points[3] = pp2
 	polyPred.header.frame_id = frame
 	
-	#check for collisions
-	laserDistance = sensor_data.ranges[len(sensor_data.ranges)/2]
-	distFront = calculateDistance(pp0, pp1, currPose.position)
-	distRight = calculateDistance(pp1, pp3, currPose.position)
-	distLeft = calculateDistance(pp3, pp2, currPose.position)
-	distBack = calculateDistance(pp2, pp0, currPose.position)
-	for point in sensor_data.ranges:
-		if (laserDistance <= distFront or
-		    laserDistance <= distLeft or 
-		    laserDistance <= distRight or
-		    laserDistance <= distBack):
-			disablePublisher()
-			rospy.loginfo('Possible collision detected.')
-			subprocess.call(['/usr/bin/canberra-gtk-play','--id','suspend-error'])
-			#possible sound files are in /usr/share/sounds/freedesktop/stereo
-			exit()
-	
 	#publish polygons
 	currentFramePub.publish(polyCurr)
 	predictedFramePub.publish(polyPred)
 
+	return polyPred
+
+def triggerEstop():
+	disablePublisher()
+	rospy.loginfo('Possible collision detected.')
+	subprocess.call(['/usr/bin/canberra-gtk-play','--id','suspend-error'])
+	#possible sound files are in /usr/share/sounds/freedesktop/stereo
+	exit()
+
+#uses sonar readings to predict collisions
+def sonarCallback(data):
+	if rosAriaPose.twist.twist.linear.x < 0:
+		evaluateReadings(data.points[0,9])
+
+#uses laser readings to predict collisions
+def laserCallback(data):
+	if rosAriaPose.twist.twist.linear.x >= 0:
+		pose = amclPose.pose.pose
+		points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
+		pc = PointCloud()
+		pc.header.frame_id = "map"
+		pc.points = [0] * len(points)		
+		counter = 0
+		for point in points:
+			p = Point32(laserOffset + point[0], point[1], 0)
+			rotatePose(p, pose.orientation)
+			p.x = pose.position.x + p.x
+			p.y = pose.position.y + p.y
+			pc.points[counter] = p
+			counter = counter + 1			
+		evaluateReadings(pc)
+		#testCloudPub.publish(pc)
+
+#uses laser readings to simulate the sonar and predict collisions
+def sonarLaserCallback(data):
+	if rosAriaPose.twist.twist.linear.x < 0:
+		pose = amclPose.pose.pose
+		points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
+		pc = PointCloud()
+		pc.header.frame_id = "map"
+		pc.points = [0] * len(points)
+		counter = 0
+		for point in points:
+			tfq = transformations.quaternion_from_euler(0, 0, 3.14)
+			q = Quaternion(tfq[0], tfq[1], tfq[2], tfq[3])
+			p = Point32(point[0], point[1], 0)
+			rotatePose(p, q)
+			p.x = sonarOffset + p.x
+			rotatePose(p, pose.orientation)
+			p.x = pose.position.x + p.x
+			p.y = pose.position.y + p.y
+			pc.points[counter] = p
+			counter = counter + 1
+		evaluateReadings(pc)
+		#testCloudPub.publish(pc)
+
+def evaluateReadings(pc):
+	polygon = calculatePolygons()
+	minX = 10000
+	minY = 10000
+	maxX = -10000
+	maxY = -10000
+	for point in polygon.polygon.points:
+		if point.x < minX:
+			minX = point.x
+		if point.x > maxX:
+			maxX = point.x
+		if point.y < minY:
+			minY = point.y
+		if point.y > maxY:
+			maxY = point.y
+	for point in pc.points:
+		if (point.x > maxX or point.x < minX or 
+		  point.y > maxY or point.y < minY):
+			continue
+		else:
+			if ((point.x >= minX and point.x <= maxX) and
+			  (point.y >= minY and point.y <= maxY)):
+				triggerEstop()
 
 def estop():
 	global disablePublisher
 	global predictedFramePub
 	global currentFramePub
+	global testCloudPub
 	global cmdVelPub	
+	global transformer
+	
+	#initialize node
 	rospy.init_node('pioneer_estop', anonymous=False)
+	
+	#load configuration parameters
 	laserTopic = rospy.get_param("laserTopic", "RosAria/lms5XX_1_laserscan")
+	sim = rospy.get_param("simulation", "False")
+	
+	#connect to disable_cmd_vel_publisher service
 	rospy.wait_for_service('disable_cmd_vel_publisher')
+	
+	#subscribe to laser, sonar, amcl and odometry
+	transformer = TransformListener()
 	rospy.Subscriber(laserTopic, LaserScan, laserCallback)
 	rospy.Subscriber('RosAria/pose', Odometry, rosAriaPoseCallback)
 	rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclPoseCallback)
+	if sim == True:
+		rospy.Subscriber('sonar_b', LaserScan, sonarLaserCallback)
+		rospy.loginfo('simulation')
+	else:
+		rospy.Subscriber('RosAria/sonar', PointCloud, sonarCallback)
+		
+	#initialize frame publishers
 	currentFramePub = rospy.Publisher('estop_current_frame', PolygonStamped, queue_size=1)
 	predictedFramePub = rospy.Publisher('estop_predicted_frame', PolygonStamped, queue_size=1)
+	testCloudPub = rospy.Publisher('testCloud', PointCloud, queue_size=1)
+	
+	#initialize connection to disable_cmd_vel_publisher service
 	disablePublisher = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
+	
 	rospy.loginfo('estop ready')
 	rospy.spin()
 		

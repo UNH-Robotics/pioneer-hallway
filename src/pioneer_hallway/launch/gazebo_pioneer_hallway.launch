@@ -1,6 +1,7 @@
 <launch>
 	<remap from="odom" to="RosAria/pose" />
 	<param name="laserTopic" value="base_scan" />
+	<param name="simulation" value="True" />
 	<param name="amcl/initial_pose_x" value="-2.0" />
 	<param name="amcl/initial_pose_y" value="-0.5" />
 	<param name="amcl/initial_pose_a" value="0" />
@@ -19,5 +20,7 @@
    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 	
 	<!-- start rviz -->
-	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch"/>
+	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch">
+		<arg name="rviz_file" value="gazebo_pioneer_hallway.rviz" />
+	</include>
 </launch>
