@@ -106,7 +106,7 @@ def toEuler(orient):
 def obstacles(dt, steps):
     try:
         response = obst_tracker(dt, steps)
-        return response
+        return response.obstacles[0].predictions
     except rospy.ServiceException, e:
         rospy.logerr("Service call has failed %s"%e)
 
@@ -248,9 +248,11 @@ if __name__ == '__main__':
     set_new_goal(planner, nbsr, cur_map_goal[0], cur_map_goal[1]) 
     master_clock = time.time()
     cur_clock = time.time()
+    global ObstacleDb
     try:
         while ((time.time() - cur_clock) < 1.0):
             #send the msg to the planner store the time it took
+            ObstacleDb = obstacles(0.1, 1)
             cur_clock, action = send_msg_to_planner(planner, nbsr)
             time.sleep(0.05)
             update_cur(action)
