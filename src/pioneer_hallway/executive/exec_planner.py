@@ -31,14 +31,6 @@ from pioneer_hallway.srv import *
 primitives = read_primitives(sys.argv[1])
 simulation_flag = sys.argv[2]
 
-global poseX
-global poseY
-global poseHeading
-global vel
-global goal_is_set
-
-global planner_return_state
-
 planner_return_state = (0.0, 0.0, 0.0, 0.0)
 
 poseX = 0.0
@@ -68,7 +60,7 @@ Obstacle = namedtuple("Obstacle", "t x y cov")
 ObstacleDb = []
 
 def poseCallBack(data):
-  #rospy.loginfo("updating pose from acml")
+  rospy.loginfo("updating pose from acml")
   pose = data
   global poseX 
   poseX = pose.pose.pose.position.x 
@@ -76,11 +68,11 @@ def poseCallBack(data):
   poseY = pose.pose.pose.position.y
   global poseHeading 
   poseHeading = toEuler(pose.pose.pose.orientation)
-  #rospy.logwarn("poseCallBack: " + str(poseX) + " " + str(poseY) + " " + str(poseHeading))
+  rospy.logwarn("poseCallBack: " + str(poseX) + " " + str(poseY) + " " + str(poseHeading))
   #rospy.loginfo(pose)
 
 def velCallBack(data):
-  #rospy.logwarn("updating velocities from cmd_vel " + print_cur_state())
+  rospy.logwarn("updating velocities from cmd_vel " + print_cur_state())
   global vel
   vel = data.linear.x
   
@@ -119,8 +111,7 @@ def obstacles(dt, steps):
         rospy.logerr("Service call has failed %s"%e)
 
 def exec_control_pub(action):
-    #rospy.loginfo("ecp: " + action)
-    
+    rospy.loginfo("ecp: " + action)
     pub.publish(action)
 
 def update_lcur(msg):
@@ -170,6 +161,7 @@ def set_new_goal(p, nbsr, x, y):
     time.sleep(0.25)
     rospy.logwarn("waiting on planner to update goal")
     out = nbsr.readline(0.25)
+    out = nbsr.readline(0.25)
   rospy.loginfo("planner fired up and ready to go")
   global goal_is_set
   goal_is_set = True
@@ -180,6 +172,7 @@ def send_goal_to_planner(p, nbsr, x, y):
   rospy.loginfo("sending new goal to plan towards: " + msg)
   p.stdin.write(msg)
   try:
+    out = nbsr.readline(0.20)
     out = nbsr.readline(0.20)
     rospy.loginfo("from planner: " + out + "\n")
     if out == "READY":
@@ -193,20 +186,24 @@ def send_goal_to_planner(p, nbsr, x, y):
 
 def send_msg_to_planner(p, nbsr):
     if planner_finished:
-      msg = "STATE\n" + str(int(time.time() * 1000) + 250) + ' ' + print_cur_state() + '\n'
+      msg = "STATE\n" + str(int(time.time() * 1000) + 250) + ' ' + print_cur_state() + '\r' 
       for obst in ObstacleDb:
-          msg = msg + str(obst.x) + ' ' + str(obst.y) + '\n'
+          msg = msg + str(obst.x) + ' ' + str(obst.y) + '\r'
       msg = msg + "END\n"
-      #rospy.loginfo("sending new state to plan to: " + msg)
+      rospy.loginfo("sending new state to plan to: " + msg)
       p.stdin.write(msg)
       p.stdin.flush()
     # time.sleep(0.25)
     # have to wait for the process to respond
+    time.sleep(0.1)
     try:
-        (t,a) = (time.time(), nbsr.readline(0.250))
-        (t2,b) = (t, nbsr.readline(0.0))
-        #rospy.loginfo("plan msg: " + a + "\n") 
-        #rospy.loginfo("plan action: " + b + "\n")
+        (t,a) = (time.time(), nbsr.readline(0.05))
+        (t2,b) = (t, nbsr.readline(0.025))
+        if a == None:
+          (t,a) = (time.time(), nbsr.readline(0.05))
+          (t2,b) = (t, nbsr.readline(0.025))
+        rospy.loginfo("plan msg: " + a + "\n") 
+        rospy.loginfo("plan action: " + b + "\n")
         if a == None:
           global planner_finished
           planner_finished = False
@@ -240,21 +237,13 @@ if __name__ == '__main__':
     # give time for the planner to initialize
     # the master clock for the planner
     cur_map_goal = (0, 0)
-    sim_map_goal = (1.89, 3.21)
+    sim_map_goal = (0.02, -0.421)
     kings_map_goal = (-64.5, -39.8)
 
     if simulation_flag == "-simulator":
       cur_map_goal = sim_map_goal
-      global poseX
-      global poseY
-      poseX = -1.97
-      poseY = -0.48
     else:
       cur_map_goal = kings_map_goal
-      global poseX
-      global poseY
-      poseX = -64.7
-      poseY = -44.1
     
     set_new_goal(planner, nbsr, cur_map_goal[0], cur_map_goal[1]) 
     master_clock = time.time()
@@ -263,8 +252,9 @@ if __name__ == '__main__':
         while ((time.time() - cur_clock) < 1.0):
             #send the msg to the planner store the time it took
             cur_clock, action = send_msg_to_planner(planner, nbsr)
+            time.sleep(0.05)
             update_cur(action)
-            cont_msg = action[0] + "," + str(planner_return_state[0]) + "," + str(planner_return_state[1]) + "," + str(planner_return_state[2]) + "," + str(planner_return_state[2]) + "," + str(int(time.time() * 1000) + 250) + "\n"
+            cont_msg = action[0] + "," + str(planner_return_state[0]) + "," + str(planner_return_state[1]) + "," + str(planner_return_state[2]) + "," + str(planner_return_state[3]) + "," + str(int(time.time() * 1000) + 250) + "\n"
             exec_control_pub(cont_msg)
             #rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             #time.sleep((time.time() - cur_clock))
