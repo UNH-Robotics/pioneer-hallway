@@ -143,7 +143,24 @@ def triggerEstop():
 #uses sonar readings to predict collisions
 def sonarCallback(data):
 	if rosAriaPose.twist.twist.linear.x < 0:
-		evaluateReadings(data.points[0,9])
+		pose = amclPose.pose.pose
+		pc = PointCloud()
+		pc.header.frame_id = "map"
+		pc.points = [0] * len(data.points)
+		counter = 0
+		for point in data.points:
+			tfq = transformations.quaternion_from_euler(0, 0, 0)
+			q = Quaternion(tfq[0], tfq[1], tfq[2], tfq[3])
+			p = Point32(point.x, point.y, 0)
+			rotatePose(p, q)
+			#p.x = p.x
+			rotatePose(p, pose.orientation)
+			p.x = pose.position.x + p.x
+			p.y = pose.position.y + p.y
+			pc.points[counter] = p
+			counter = counter + 1
+		testCloudPub.publish(pc)
+		evaluateReadings(pc)
 
 #uses laser readings to predict collisions
 def laserCallback(data):
