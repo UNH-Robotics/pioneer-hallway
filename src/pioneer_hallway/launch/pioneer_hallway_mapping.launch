@@ -9,10 +9,15 @@
 	<include file="$(find pioneer_hallway)/launch/2dnav_pioneer_hallway.launch"/>
 
 	<!-- controller node -->
-	<include file="$(find pioneer_test)/launch/pioneer_controller_spin_recover.launch"/>
+	<include file="$(find pioneer_test)/launch/pioneer_controller.launch"/>
 	
 	<!-- start gmapping -->
-	<node pkg="gmapping" type="slam_gmapping" name="gmapping">
+	<arg name="map_update_interval" value="1" />
+	<arg name="maxUrange" value="10" />
+	<arg name="linearUpdate" value="0.5" />
+	<arg name="angularUpdate" value="0.2" />
+	<arg name="temporalUpdate" value="1" />
+	<node pkg="gmapping" type="slam_gmapping" name="gmapping" args="$(arg map_update_interval) $(arg maxUrange) $(arg linearUpdate) $(arg angularUpdate) $(arg temporalUpdate)">
 		<remap from="scan" to="RosAria/lms5XX_1_laserscan"/>
 		<remap from="RosAria/lms5XX_1_laserscan" to="base_scan"/>
 	</node>

@@ -3,6 +3,11 @@
   <node pkg="gmapping" type="slam_gmapping" name="gmapping">
 	  <remap from="scan" to="RosAria/lms5XX_1_laserscan"/>
 	  <remap from="RosAria/lms5XX_1_laserscan" to="base_scan"/>
+	  <arg name="map_update_interval" value="1" />
+	  <arg name="maxUrange" value="10" />
+	  <arg name="linearUpdate" value="0.5" />
+	  <arg name="angularUpdate" value="0.2" />
+	  <arg name="temporalUpdate" value="1" />
   </node>
   
   <!-- Include move base launch file -->
