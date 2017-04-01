@@ -44,7 +44,7 @@ currentState = None
 changePlan = 0
 positionWeight = 0.9
 samplingNum = 200
-sampleScale = 2.0
+sampleScale = 0.1
 pathFileName = None
 trajectoryFileName = None
 controllerLogName = None
@@ -92,20 +92,6 @@ def executive_listener():
 
 def pose_callback(data):
     global currentState
-    # rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
-    #               "linear x: %.2f" % data.twist.twist.linear.x + "\n" + 
-    #               "linear y: %.2f" % data.twist.twist.linear.y+"\n"+
-    #               "linear z: %.2f" % data.twist.twist.linear.z+"\n"+
-    #               "angular x: %.2f" % data.twist.twist.angular.x+"\n"+
-    #               "angular y: %.2f" % data.twist.twist.angular.y+"\n"+
-    #               "angular z: %.2f" % data.twist.twist.angular.z+"\n" +
-    #               "position x: %.2f" %data.pose.pose.position.x + "\n" +
-    #               "position y: %.2f" %data.pose.pose.position.y + "\n" +
-    #               "orentation x: %.2f" %data.pose.pose.orientation.x + "\n" +
-    #               "orentation y: %.2f" %data.pose.pose.orientation.y + "\n" +
-    #               "orentation z: %.2f" %data.pose.pose.orientation.z + "\n" +
-    #               "orentation w: %.2f" %data.pose.pose.orientation.w + "\n")
-    #rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info')
     quaternion = (
         data.pose.pose.orientation.x,
         data.pose.pose.orientation.y,
@@ -113,12 +99,18 @@ def pose_callback(data):
         data.pose.pose.orientation.w)
     euler = tf.transformations.euler_from_quaternion(quaternion)
     h = euler[2]
+    # rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+    #               "linear x: %.2f" % data.twist.twist.linear.x + "\n" + 
+    #               "angular z: %.2f" % data.twist.twist.angular.z+"\n" +
+    #               "position x: %.2f" %data.pose.pose.position.x + "\n" +
+    #               "position y: %.2f" %data.pose.pose.position.y + "\n" +
+    #               "heading h: %.2f" %h )
     currentState = State(data.pose.pose.position.x,
-                          data.pose.pose.position.y,
-                          data.twist.twist.linear.x,
-                          data.twist.twist.angular.z,
-                          h,
-                          time.time())
+                         data.pose.pose.position.y,
+                         data.twist.twist.linear.x,
+                         h,
+                         time.time(), 
+                         data.twist.twist.angular.z)
     
 def amclpose_callback(data):
     global currentState
@@ -162,34 +154,40 @@ def twist_callback(data):
     
 def pose_listener():
     global currentState
-    #rospy.Subscriber('RosAria/pose', Odometry, pose_callback)
+    rospy.Subscriber('RosAria/pose', Odometry, pose_callback)
     #rospy.Subscriber('odom', Odometry, pose_callback)
-    currentState = State(1, 1, 1, 1, 1, 1)
-    rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclpose_callback)
-    rospy.Subscriber('cmd_vel', Twist, twist_callback)
+    #currentState = State(1, 1, 1, 1, 1, 1)
+    #rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclpose_callback)
+    #rospy.Subscriber('cmd_vel', Twist, twist_callback)
     rospy.spin()
 
-def sampling_based_controller(refAction, start, end, beginClock):
-    deltaT = time.time() - beginClock
+def sampling_based_controller(refAction, start, end, endClock):
+    deltaT = endClock - time.time()
     goalOffset = float('inf')
+    goalX_est = 0
+    goalY_est = 0
+    goalH_est = 0
     twist = Twist()
     vCandidate = np.random.normal(end.v, sampleScale, samplingNum)
-    wCandidate = np.random.normal(end.w, sampleScale, samplingNum)
+    wCandidate = np.random.normal((end.h - start.h) / deltaT, sampleScale, samplingNum)
     for i in range(samplingNum):
         goalX = start.x + vCandidate[i] * deltaT * math.cos(
-            start.w + (wCandidate[i] * deltaT) / 2)
+            start.h + (wCandidate[i] * deltaT) / 2)
         goalY = start.y + vCandidate[i] * deltaT * math.sin(
-            start.w + (wCandidate[i] * deltaT) / 2)
+            start.h + (wCandidate[i] * deltaT) / 2)
         goalH = start.h + wCandidate[i] * deltaT
         disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
                         math.pow(goalY - end.y, 2.0))
-        disH = abs(goalH - end.h)
+        disH = abs(goalH - end.h) 
         totalDis = positionWeight * disP + (1 - positionWeight) * disH
         if totalDis < goalOffset:
             goalOffset = totalDis
             twist.linear.x = vCandidate[i]
             twist.angular.z = wCandidate[i]
-    print "get new action to: ", end.x, end.y, "\naction: ", twist.linear.x, twist.angular.z
+            goalX_est = goalX
+            goalY_est = goalY
+            goalH_est = goalH
+    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1]
     return twist
 
 def model_predictive_controller(refAction, start, end, endClock):
@@ -198,20 +196,27 @@ def model_predictive_controller(refAction, start, end, endClock):
     goalOffset = float('inf')
     goalX_est = 0
     goalY_est = 0
+    goalH_est = 0
     twist = Twist()
     vCandidate = np.random.normal(start.v + refAction[0] * deltaT,
                                   sampleScale, samplingNum)
-    wCandidate = np.random.normal(start.w + refAction[1] * deltaT,
+    wCandidate = np.random.normal((end.h - start.h) / deltaT,
                                   sampleScale, samplingNum)
     for i in range(samplingNum):
-        goalX = start.x + vCandidate[i] * deltaT * math.cos(
-            start.w + (wCandidate[i] * deltaT) / 2)
-        goalY = start.y + vCandidate[i] * deltaT * math.sin(
-            start.w + (wCandidate[i] * deltaT) / 2)
-        goalH = start.h + wCandidate[i] * deltaT
+        #print vCandidate[i], wCandidate[i]
+        #acturalV = (start.v + vCandidate[i]) / 2
+        #acturalW = (start.w + wCandidate[i]) / 2
+        acturalV = vCandidate[i]
+        acturalW = wCandidate[i]
+        goalX = start.x + acturalV * deltaT * math.cos(
+            start.h + (acturalW * deltaT) / 2)
+        goalY = start.y + acturalV * deltaT * math.sin(
+            start.h + (acturalW * deltaT) / 2)
+        goalH = start.h + acturalW * deltaT
         disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
                         math.pow(goalY - end.y, 2.0))
-        disH = abs(goalH - end.h)
+        #disH = abs(goalH - end.h) % (2 * math.pi)
+        disH = abs(goalH - end.h) 
         totalDis = positionWeight * disP + (1 - positionWeight) * disH
         if totalDis < goalOffset:
             goalOffset = totalDis
@@ -219,32 +224,8 @@ def model_predictive_controller(refAction, start, end, endClock):
             twist.angular.z = wCandidate[i]
             goalX_est = goalX
             goalY_est = goalY
-    print "get new action to: ", end.x, end.y, "\naction: ", twist.linear.x, twist.angular.z
-    # print "\nmore info: %.2f" %twist.linear.x , "," ,
-    # "%.2f" %twist.angular.z , "," ,
-    # "%.2f" %start.v , ", " ,
-    # "%.2f" %start.w , ", " ,
-    # "%.2f" %refAction[0], ", " ,
-    # "%.2f" %refAction[1], ", " ,
-    # "%.2f" %start.x , ", " ,
-    # "%.2f" %start.y , ", " ,
-    # "%.2f" %goal.x , ", " ,
-    # "%.2f" %goal.y , ", " ,
-    # "%.2f" %goalX_est , ", " ,
-    # "%.2f" %goalY_est , '\n'
-    # with open(controllerLogName, 'a') as f:
-    #     f.write( "%.2f" %twist.linear.x + "," +
-    #              "%.2f" %twist.angular.z + "," +
-    #              "%.2f" %start.v + ", " +
-    #              "%.2f" %start.w + ", " +
-    #              "%.2f" %refAction[0]+ ", " +
-    #              "%.2f" %refAction[1]+ ", " +
-    #              "%.2f" %start.x + ", " +
-    #              "%.2f" %start.y + ", " +
-    #              "%.2f" %goal.x + ", " +
-    #              "%.2f" %goal.y + ", " +
-    #              "%.2f" %goalX_est + ", " +
-    #              "%.2f" %goalY_est + '\n')
+            goalH_est = goalH
+    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1]
     return twist
 
 def move():
@@ -278,7 +259,7 @@ def move():
             # motion= sampling_based_controller(motions[currentAction],
             #                                   currentState,
             #                                   goalState,
-            #                                   beginClock)
+            #                                   endClock)
             motion= model_predictive_controller(motions[currentAction],
                                                 currentState,
                                                 goalState,
