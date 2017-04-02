@@ -5,5 +5,7 @@
 		<param name="RevCount" value="14750"/>
 		<param name="DriftFactor" value="-20"/>
 		<param name="cmd_vel_timeout" value="0"/>
+		<param name="trans_accel" value="0.6"/>
+		<param name="trans_decel" value="0.6"/>
 	</node>
 </launch>

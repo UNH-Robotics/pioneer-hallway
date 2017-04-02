@@ -16,16 +16,13 @@ from std_srvs.srv import Empty
 rosAriaPose = Odometry()
 amclPose = PoseWithCovarianceStamped()
 disablePublisher = None
-testCloudPub = None
-currentFramePub = None
+#testCloudPub = None
+#currentFramePub = None
 predictedFramePub = None
 cmdVelPub = None
 
 #used in rotations
 frame = 'map'
-
-#value in seconds
-deltaT = 4
 
 #values in meters
 robotLength = 0.455
@@ -36,6 +33,10 @@ robotLengthFromCenter = (robotLength + robotLCushion) / 2
 robotWidthFromCenter = (robotWidth + robotWCushion) / 2
 sonarOffset = -0.198 #value grabbed from pioneer3dx.xacro
 laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
+
+#value in m/s**2
+maxDecel = 0.6
+ariaFactor = 0.7
 
 #calculates the distance between a point and a line
 #lineEnd and lineStart define the end and start points of the line
@@ -70,7 +71,8 @@ def amclPoseCallback(pose):
 	global amclPose
 	amclPose = pose
 
-def calculatePolygons():
+def calculatePolygons(deltaT):
+	#rospy.loginfo("%f", deltaT)
 	#get current pose
 	currPose = amclPose.pose.pose
 	currTwist = rosAriaPose.twist.twist
@@ -128,7 +130,7 @@ def calculatePolygons():
 	polyPred.header.frame_id = frame
 	
 	#publish polygons
-	currentFramePub.publish(polyCurr)
+	#currentFramePub.publish(polyCurr)
 	predictedFramePub.publish(polyPred)
 
 	return polyPred
@@ -142,102 +144,114 @@ def triggerEstop():
 
 #uses sonar readings to predict collisions
 def sonarCallback(data):
-	if rosAriaPose.twist.twist.linear.x < 0:
-		pose = amclPose.pose.pose
-		pc = PointCloud()
-		pc.header.frame_id = "map"
-		pc.points = [0] * len(data.points)
-		counter = 0
-		for point in data.points:
-			tfq = transformations.quaternion_from_euler(0, 0, 0)
-			q = Quaternion(tfq[0], tfq[1], tfq[2], tfq[3])
-			p = Point32(point.x, point.y, 0)
-			rotatePose(p, q)
-			#p.x = p.x
-			rotatePose(p, pose.orientation)
-			p.x = pose.position.x + p.x
-			p.y = pose.position.y + p.y
-			pc.points[counter] = p
-			counter = counter + 1
-		testCloudPub.publish(pc)
-		evaluateReadings(pc)
+	pose = amclPose.pose.pose
+	pc = PointCloud()
+	pc.header.frame_id = "map"
+	pc.points = [0] * len(data.points)
+	counter = 0
+	for point in data.points:
+		tfq = transformations.quaternion_from_euler(0, 0, 0)
+		q = Quaternion(tfq[0], tfq[1], tfq[2], tfq[3])
+		p = Point32(point.x, point.y, 0)
+		rotatePose(p, q)
+		#p.x = p.x
+		rotatePose(p, pose.orientation)
+		p.x = pose.position.x + p.x
+		p.y = pose.position.y + p.y
+		pc.points[counter] = p
+		counter = counter + 1
+	#testCloudPub.publish(pc)
+	evaluateReadings(pc)
 
 #uses laser readings to predict collisions
 def laserCallback(data):
-	if rosAriaPose.twist.twist.linear.x >= 0:
-		pose = amclPose.pose.pose
-		points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
-		pc = PointCloud()
-		pc.header.frame_id = "map"
-		pc.points = [0] * len(points)		
-		counter = 0
-		for point in points:
-			p = Point32(laserOffset + point[0], point[1], 0)
-			rotatePose(p, pose.orientation)
-			p.x = pose.position.x + p.x
-			p.y = pose.position.y + p.y
-			pc.points[counter] = p
-			counter = counter + 1			
-		evaluateReadings(pc)
-		#testCloudPub.publish(pc)
+	pose = amclPose.pose.pose
+	points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
+	pc = PointCloud()
+	pc.header.frame_id = "map"
+	pc.points = [0] * len(points)		
+	counter = 0
+	for point in points:
+		p = Point32(laserOffset + point[0], point[1], 0)
+		rotatePose(p, pose.orientation)
+		p.x = pose.position.x + p.x
+		p.y = pose.position.y + p.y
+		pc.points[counter] = p
+		counter = counter + 1			
+	evaluateReadings(pc)
+	#testCloudPub.publish(pc)
 
 #uses laser readings to simulate the sonar and predict collisions
 def sonarLaserCallback(data):
-	if rosAriaPose.twist.twist.linear.x < 0:
-		pose = amclPose.pose.pose
-		points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
-		pc = PointCloud()
-		pc.header.frame_id = "map"
-		pc.points = [0] * len(points)
-		counter = 0
-		for point in points:
-			tfq = transformations.quaternion_from_euler(0, 0, 3.14)
-			q = Quaternion(tfq[0], tfq[1], tfq[2], tfq[3])
-			p = Point32(point[0], point[1], 0)
-			rotatePose(p, q)
-			p.x = sonarOffset + p.x
-			rotatePose(p, pose.orientation)
-			p.x = pose.position.x + p.x
-			p.y = pose.position.y + p.y
-			pc.points[counter] = p
-			counter = counter + 1
-		evaluateReadings(pc)
-		#testCloudPub.publish(pc)
+	pose = amclPose.pose.pose
+	points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  for i in range(len(data.ranges))], data.ranges)
+	pc = PointCloud()
+	pc.header.frame_id = "map"
+	pc.points = [0] * len(points)
+	counter = 0
+	for point in points:
+		tfq = transformations.quaternion_from_euler(0, 0, 3.14)
+		q = Quaternion(tfq[0], tfq[1], tfq[2], tfq[3])
+		p = Point32(point[0], point[1], 0)
+		rotatePose(p, q)
+		p.x = sonarOffset + p.x
+		rotatePose(p, pose.orientation)
+		p.x = pose.position.x + p.x
+		p.y = pose.position.y + p.y
+		pc.points[counter] = p
+		counter = counter + 1
+	evaluateReadings(pc)
+	#testCloudPub.publish(pc)
 
 def evaluateReadings(pc):
-	polygon = calculatePolygons()
-	minX = 10000
-	minY = 10000
-	maxX = -10000
-	maxY = -10000
-	for point in polygon.polygon.points:
-		if point.x < minX:
-			minX = point.x
-		if point.x > maxX:
-			maxX = point.x
-		if point.y < minY:
-			minY = point.y
-		if point.y > maxY:
-			maxY = point.y
-	for point in pc.points:
-		if (point.x > maxX or point.x < minX or 
-		  point.y > maxY or point.y < minY):
-			continue
-		else:
-			if ((point.x >= minX and point.x <= maxX) and
-			  (point.y >= minY and point.y <= maxY)):
-				triggerEstop()
+	#calculate deltaT
+	deltaT = max(abs((rosAriaPose.twist.twist.linear.x / ariaFactor) / maxDecel), 0.5)
+	timeIncrement = deltaT / 4
+	currTime = timeIncrement
+	while currTime <= deltaT:
+		polygon = calculatePolygons(currTime)
+		#try:
+		#	predictedFramePub.publish(polygon)
+		#except:
+		#	pass
+		minX = 10000
+		minY = 10000
+		maxX = -10000
+		maxY = -10000
+		for point in polygon.polygon.points:
+			if point.x < minX:
+				minX = point.x
+			if point.x > maxX:
+				maxX = point.x
+			if point.y < minY:
+				minY = point.y
+			if point.y > maxY:
+				maxY = point.y
+		for point in pc.points:
+			if (point.x > maxX or point.x < minX or 
+			  point.y > maxY or point.y < minY):
+				continue
+			else:
+				if ((point.x >= minX and point.x <= maxX) and
+				  (point.y >= minY and point.y <= maxY)):
+					triggerEstop()
+		currTime = currTime + timeIncrement
 
 def estop():
 	global disablePublisher
 	global predictedFramePub
-	global currentFramePub
-	global testCloudPub
+	#global currentFramePub
+	#global testCloudPub
 	global cmdVelPub	
 	global transformer
 	
 	#initialize node
 	rospy.init_node('pioneer_estop', anonymous=False)
+	
+	#initialize frame publishers
+	#currentFramePub = rospy.Publisher('estop_current_frame', PolygonStamped, queue_size=1)
+	predictedFramePub = rospy.Publisher('estop_predicted_frame', PolygonStamped, queue_size=1)
+	#testCloudPub = rospy.Publisher('testCloud', PointCloud, queue_size=1)
 	
 	#load configuration parameters
 	laserTopic = rospy.get_param("laserTopic", "RosAria/lms5XX_1_laserscan")
@@ -257,11 +271,6 @@ def estop():
 	else:
 		rospy.Subscriber('RosAria/sonar', PointCloud, sonarCallback)
 		
-	#initialize frame publishers
-	currentFramePub = rospy.Publisher('estop_current_frame', PolygonStamped, queue_size=1)
-	predictedFramePub = rospy.Publisher('estop_predicted_frame', PolygonStamped, queue_size=1)
-	testCloudPub = rospy.Publisher('testCloud', PointCloud, queue_size=1)
-	
 	#initialize connection to disable_cmd_vel_publisher service
 	disablePublisher = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
 	
