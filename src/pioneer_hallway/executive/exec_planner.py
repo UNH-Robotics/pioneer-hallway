@@ -41,6 +41,13 @@ vel = 0.0
 goal_is_set = True
 planner_finished = True
 
+if simulation_flag == "-simulator":
+  poseX = -1.97
+  poseY = -0.48
+else:
+  poseX = -64.7
+  poseY = -44.1
+
 ''' 
  TODO: find out the msg type and read
        in the obstacles into the Db
@@ -106,7 +113,7 @@ def obstacles(dt, steps):
         get_obstacles_request = rospy.ServiceProxy('get_obstacles', GetObstacles)
         response = get_obstacles_request(dt, steps)
         print(str(response))
-        return response.count
+        return response
     except rospy.ServiceException, e:
         rospy.logerr("Service call has failed %s"%e)
 
@@ -184,21 +191,32 @@ def send_goal_to_planner(p, nbsr, x, y):
 
 def send_msg_to_planner(p, nbsr):
     if planner_finished:
-      msg = "STATE\n" + str(int(time.time() * 1000) + 250) + ' ' + print_cur_state() + '\n'
+      msg = "STATE\n" + str(int(time.time() * 1000)) + ' ' + print_cur_state() + '\n'
       for obst in ObstacleDb:
           msg = msg + "0 " + str(obst.x) + ' ' + str(obst.y) + ' ' + str(obst.r) + ' ' + str(obst.cov) + '\n'
       msg = msg + "END\n"
       rospy.logdebug("sending new state to plan to: " + msg)
-      p.stdin.write(msg)
+      p.stdin.write(str.encode(msg))
       p.stdin.flush()
     # time.sleep(0.25)
     # have to wait for the process to respond
     time.sleep(0.15)
     try:
+        plan = []
+        projection = []
         (t,a) = (time.time(), nbsr.readline(0.25))
-        (t2,b) = (t, nbsr.readline(0.0))
-        rospy.logdebug("plan msg: " + a + "\n") 
-        rospy.logdebug("plan action: " + b + "\n")
+        rospy.logdebug("a: " + a)
+        while a != "END":
+          (t,a) = (time.time(), nbsr.readline(0.1))
+          if a != None:
+            plan.append((t,a))  
+        (t2,b) = (t, nbsr.readline(0.25))
+        rospy.logdebug("b: " + b)
+        while b != "END":
+          (t2,b) = (time.time(), nbsr.readline(0.1))
+          projection.append((t2,b))
+        rospy.logdebug("plan: " + str(plan) + "\n") 
+        rospy.logdebug("projection: " + str(projection) + "\n")
         if a == None:
           #global planner_finished
           #planner_finished = False
@@ -209,20 +227,22 @@ def send_msg_to_planner(p, nbsr):
         else:
           #global planner_finished
           #planner_finished = True
-          return (t,b.split(' ',1))
-    except:
+          rospy.logdebug(plan[0])
+          return (t,plan[0][1].split(' ',1))
+    except Exception, e:
         #global planner_finished
         #planner_finished = False
         rospy.logfatal("planner did not respond assuming no action - planner finished? planner error'd dying...")
         rospy.logfatal("last msg before crash: " + msg)
+        rospy.logerr("%s"%e)
         exit()
         return (time.time(), ["a7"])
 
 if __name__ == '__main__':
     # wait for services before starting up ...
     rospy.loginfo("Waiting for services before starting up ...")
-    rospy.wait_for_service('get_obstacles')
-    ObstacleDb = obstacles(0.1, 1)
+    #rospy.wait_for_service('get_obstacles')
+    #ObstacleDb = obstacles(0.1, 1)
     # fork and create a child subprocess of the planner
     rospy.loginfo("Running Planner with 3s startup time...")
     planner = Popen(["./planner.sh", simulation_flag],
@@ -245,16 +265,8 @@ if __name__ == '__main__':
 
     if simulation_flag == "-simulator":
       cur_map_goal = sim_map_goal
-      global poseX
-      global poseY
-      poseX = -1.97
-      poseY = -0.48
     else:
       cur_map_goal = kings_map_goal
-      global poseX
-      global poseY
-      poseX = -64.7
-      poseY = -44.1
     
     set_new_goal(planner, nbsr, cur_map_goal[0], cur_map_goal[1]) 
     cur_clock = time.time()
