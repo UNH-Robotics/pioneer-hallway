@@ -196,6 +196,8 @@ def sampling_based_controller(refAction, start, end, endClock):
 
 
 def model_predictive_controller(refAction, start, end, endClock):
+    if end.h > math.pi:
+        end.h = end.h - 2 * math.pi
     deltaT = endClock - time.time()
     goalOffset = float('inf')
     goalX_est = 0
@@ -204,11 +206,18 @@ def model_predictive_controller(refAction, start, end, endClock):
     twist = Twist()
     vCandidate = np.random.normal(start.v + refAction[0] * deltaT,
                                   sampleScale, samplingNum)
-    wCandidate = np.random.normal((end.h - start.h) / duration,
+    dh = (end.h - start.h) / duration
+    if dh > 5.3:
+        dh = math.pi
+    elif dh <-5.3:
+        dh = -5.3
+    wCandidate = np.random.normal(dh,
                                   sampleScale, samplingNum)
     # wCandidate = np.random.normal(start.w + refAction[1] * deltaT,
     #                               sampleScale, samplingNum)
     for i in range(samplingNum):
+        if vCandidate[i] < 0:
+            vCandidate[i] = 0
         #print vCandidate[i], wCandidate[i]
         #acturalV = (start.v + vCandidate[i]) / 2
         #acturalW = (start.w + wCandidate[i]) / 2
@@ -231,6 +240,85 @@ def model_predictive_controller(refAction, start, end, endClock):
             goalX_est = goalX
             goalY_est = goalY
             goalH_est = goalH
+    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
+    return twist
+
+def bisection_search_controller(refAction, start, end, endClock):
+    if end.h > math.pi:
+        end.h = end.h - 2 * math.pi
+    deltaT = endClock - time.time()
+    goalOffset = float('inf')
+    goalX_est = 0
+    goalY_est = 0
+    goalH_est = 0
+    twist = Twist()
+    vCandidate = []
+    wCandidate = []
+    vMean = start.v + refAction[0] * deltaT
+    vSmallD = 0.2
+    vMax = 2.2
+    wMean = start.w + refAction[1] * deltaT
+    wSmallD = 0.2
+    wMax = 5.3 #300 degree per sec
+    vCandidate.append(-vMax)
+    vCandidate.append(vMean - vSmallD)
+    vCandidate.append(vMean)
+    vCandidate.append(vMean + vSmallD)
+    vCandidate.append(vMax)
+    wCandidate.append(-wMax)
+    wCandidate.append(wMean - wSmallD)
+    wCandidate.append(wMean)
+    wCandidate.append(wMean + wSmallD)
+    wCandidate.append(wMax)
+    bestVIndex = -1;
+    bestV = 0
+    bestV2 = 0
+    bestWIndex = -1;
+    bestW = 0
+    bestW2 = 0
+    for v in vCandidate:
+        for w in wCandidate:
+            goalX = start.x + v * deltaT * math.cos(
+                start.h + (w * deltaT) / 2)
+            goalY = start.y + v * deltaT * math.sin(
+                start.h + (w * deltaT) / 2)
+            goalH = start.h + w * deltaT
+            disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
+                             math.pow(goalY - end.y, 2.0))
+            #disH = abs(goalH - end.h) % (2 * math.pi)
+            disH = abs(goalH - end.h) 
+        totalDis = positionWeight * disP + (1 - positionWeight) * disH
+        if totalDis < goalOffset:
+            goalOffset = totalDis
+            twist.linear.x = vCandidate[i]
+            twist.angular.z = wCandidate[i]
+            goalX_est = goalX
+            goalY_est = goalY
+            goalH_est = goalH
+        # if vCandidate[i] < 0:
+        #     vCandidate[i] = 0
+        # #print vCandidate[i], wCandidate[i]
+        # #acturalV = (start.v + vCandidate[i]) / 2
+        # #acturalW = (start.w + wCandidate[i]) / 2
+        # acturalV = vCandidate[i]
+        # acturalW = wCandidate[i]
+        # goalX = start.x + acturalV * deltaT * math.cos(
+        #     start.h + (acturalW * deltaT) / 2)
+        # goalY = start.y + acturalV * deltaT * math.sin(
+        #     start.h + (acturalW * deltaT) / 2)
+        # goalH = start.h + acturalW * deltaT
+        # disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
+        #                 math.pow(goalY - end.y, 2.0))
+        # #disH = abs(goalH - end.h) % (2 * math.pi)
+        # disH = abs(goalH - end.h) 
+        # totalDis = positionWeight * disP + (1 - positionWeight) * disH
+        # if totalDis < goalOffset:
+        #     goalOffset = totalDis
+        #     twist.linear.x = vCandidate[i]
+        #     twist.angular.z = wCandidate[i]
+        #     goalX_est = goalX
+        #     goalY_est = goalY
+        #     goalH_est = goalH
     print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
     return twist
 
