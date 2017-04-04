@@ -93,10 +93,9 @@ def odomCallBack(msg):
         pub - our only publisher to give controller actions
         obst_track - assign our callback to the tracker
 '''
-rospy.init_node('executive', log_level=rospy.DEBUG)
+rospy.init_node('executive', log_level=rospy.DEBUG, anonymous=False)
 rate = rospy.Rate(60)
 pub = rospy.Publisher('controller_msg', String, queue_size=1)
-obst_tracker = rospy.ServiceProxy('get_obsticles', GetObsticles)
 amcl_pose = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, poseCallBack)
 odom = rospy.Subscriber('RosAria/pose', Odometry, odomCallBack)
 '''
@@ -104,8 +103,10 @@ odom = rospy.Subscriber('RosAria/pose', Odometry, odomCallBack)
 '''
 def obstacles(dt, steps):
     try:
-        response = obst_tracker(dt, steps)
-        return response
+        get_obstacles_request = rospy.ServiceProxy('get_obstacles', GetObstacles)
+        response = get_obstacles_request(dt, steps)
+        print(str(response))
+        return response.count
     except rospy.ServiceException, e:
         rospy.logerr("Service call has failed %s"%e)
 
@@ -185,9 +186,9 @@ def send_msg_to_planner(p, nbsr):
     if planner_finished:
       msg = "STATE\n" + str(int(time.time() * 1000) + 250) + ' ' + print_cur_state() + '\n'
       for obst in ObstacleDb:
-          msg = msg + str(obst.x) + ' ' + str(obst.y) + '\n'
+          msg = msg + "0 " + str(obst.x) + ' ' + str(obst.y) + ' ' + str(obst.r) + ' ' + str(obst.cov) + '\n'
       msg = msg + "END\n"
-      #rospy.loginfo("sending new state to plan to: " + msg)
+      rospy.logdebug("sending new state to plan to: " + msg)
       p.stdin.write(msg)
       p.stdin.flush()
     # time.sleep(0.25)
@@ -196,8 +197,8 @@ def send_msg_to_planner(p, nbsr):
     try:
         (t,a) = (time.time(), nbsr.readline(0.25))
         (t2,b) = (t, nbsr.readline(0.0))
-        #rospy.loginfo("plan msg: " + a + "\n") 
-        #rospy.loginfo("plan action: " + b + "\n")
+        rospy.logdebug("plan msg: " + a + "\n") 
+        rospy.logdebug("plan action: " + b + "\n")
         if a == None:
           #global planner_finished
           #planner_finished = False
@@ -220,7 +221,8 @@ def send_msg_to_planner(p, nbsr):
 if __name__ == '__main__':
     # wait for services before starting up ...
     rospy.loginfo("Waiting for services before starting up ...")
-    #rospy.wait_for_service('get_obsticles')
+    rospy.wait_for_service('get_obstacles')
+    ObstacleDb = obstacles(0.1, 1)
     # fork and create a child subprocess of the planner
     rospy.loginfo("Running Planner with 3s startup time...")
     planner = Popen(["./planner.sh", simulation_flag],
