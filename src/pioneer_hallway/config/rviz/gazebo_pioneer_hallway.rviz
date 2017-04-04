@@ -266,7 +266,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 255; 85; 255
+      Color: 255; 0; 0
       Enabled: true
       Head Diameter: 0.300000012
       Head Length: 0.200000003
@@ -330,7 +330,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/ThirdPersonFollower
+      Class: rviz/TopDownOrtho
       Distance: 4.42507601
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
@@ -347,7 +347,8 @@ Visualization Manager:
       Near Clip Distance: 0.00999999978
       Pitch: 0.329797477
       Target Frame: laser
-      Value: ThirdPersonFollower (rviz)
+      Scale: 83
+      Value: TopDownOrtho (rviz)
       Yaw: 3.64043236
     Saved: ~
 Window Geometry:

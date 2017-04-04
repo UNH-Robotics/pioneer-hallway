@@ -169,7 +169,10 @@ def sampling_based_controller(refAction, start, end, endClock):
     goalH_est = 0
     twist = Twist()
     vCandidate = np.random.normal(end.v, sampleScale, samplingNum)
-    wCandidate = np.random.normal((end.h - start.h) / deltaT, sampleScale, samplingNum)
+    dh = end.h - start.h
+    if dh > 2 * math.pi:
+        dh = dh - 2 * pi
+    wCandidate = np.random.normal(dh/ duration, sampleScale, samplingNum)
     for i in range(samplingNum):
         goalX = start.x + vCandidate[i] * deltaT * math.cos(
             start.h + (wCandidate[i] * deltaT) / 2)
@@ -187,12 +190,13 @@ def sampling_based_controller(refAction, start, end, endClock):
             goalX_est = goalX
             goalY_est = goalY
             goalH_est = goalH
-    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1]
+    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndT: ", deltaT
     return twist
+
+
 
 def model_predictive_controller(refAction, start, end, endClock):
     deltaT = endClock - time.time()
-    print "deltaT","%.2f" % deltaT
     goalOffset = float('inf')
     goalX_est = 0
     goalY_est = 0
@@ -200,8 +204,10 @@ def model_predictive_controller(refAction, start, end, endClock):
     twist = Twist()
     vCandidate = np.random.normal(start.v + refAction[0] * deltaT,
                                   sampleScale, samplingNum)
-    wCandidate = np.random.normal((end.h - start.h) / deltaT,
+    wCandidate = np.random.normal((end.h - start.h) / duration,
                                   sampleScale, samplingNum)
+    # wCandidate = np.random.normal(start.w + refAction[1] * deltaT,
+    #                               sampleScale, samplingNum)
     for i in range(samplingNum):
         #print vCandidate[i], wCandidate[i]
         #acturalV = (start.v + vCandidate[i]) / 2
@@ -225,7 +231,7 @@ def model_predictive_controller(refAction, start, end, endClock):
             goalX_est = goalX
             goalY_est = goalY
             goalH_est = goalH
-    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1]
+    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
     return twist
 
 def move():
