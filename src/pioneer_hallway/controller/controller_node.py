@@ -399,7 +399,7 @@ def move():
 
 def init_motions():
     global duration
-    prim_file = rospy.get_param("primite_file")
+    prim_file = rospy.get_param("primitive_file")
     (primitives, duration) = read_primitives_with_duration(prim_file)
     dupMotions = [[p.name, p.va, p.wa] for p in primitives]
     dupMotions.sort()
