@@ -1,5 +1,5 @@
 <launch> 
-	<param name="primite_file" value="~/catkin_ws/doc/motionPrimitive/primites.txt" />
+	<param name="primitive_file" value="doc/motionPrimitive/primitives.txt" />
 	
 	<!-- rosaria node -->
 	<include file="$(find pioneer_hallway)/launch/rosaria_pioneer_hallway.launch"/>

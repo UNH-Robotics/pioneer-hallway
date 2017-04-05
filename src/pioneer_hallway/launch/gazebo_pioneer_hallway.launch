@@ -2,7 +2,7 @@
 	<remap from="odom" to="RosAria/pose" />
 	<param name="laserTopic" value="base_scan" />
 	<param name="ariaFactor" value="1" />
-	<param name="primite_file" value="~/catkin_ws/doc/motionPrimitive/primites.txt" />
+	<param name="primitive_file" value="doc/motionPrimitive/primitives.txt" />
 	<param name="simulation" value="True" />
 	<param name="amcl/initial_pose_x" value="-2.0" />
 	<param name="amcl/initial_pose_y" value="-0.5" />
