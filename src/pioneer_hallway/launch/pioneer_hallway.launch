@@ -12,6 +12,7 @@
 	<include file="$(find pioneer_hallway)/launch/amcl_pioneer_hallway.launch"/>
 	
 	<!-- map server -->
+	<!--arg name="map_file" default="$(find pioneer_hallway)/maps/kingV2.yaml"/-->
 	<arg name="map_file" default="$(find pioneer_hallway)/maps/kingV2.yaml"/>
 	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 	
