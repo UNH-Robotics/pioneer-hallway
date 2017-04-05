@@ -6,6 +6,7 @@ from sensor_msgs.msg import LaserScan, PointCloud, ChannelFloat32
 from nav_msgs.srv import GetMap
 from pioneer_hallway.srv import GetObstacles
 from nav_msgs.msg import OccupancyGrid, Odometry
+from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import *
 from std_msgs.msg import Header
 import numpy as np
@@ -18,7 +19,7 @@ position_estimate = None
 map_resolution = None
 map_pose = None
 cloud_pub = None
-
+path_pub = None
 transformer = None
 
 
@@ -36,12 +37,13 @@ class Obsticle:
 
     H = np.array([ 1, 0, 0, 0  ])
     def __init__(self, x, y, time, cov, radius):
-        print("Creating Obticle", x, y, time, radius)
+        #print("Creating Obticle", x, y, time, radius)
         self.state = np.array([ x, y, 0, 0 ])
         self.cov = np.diag([cov, cov, cov, cov])
         self.radius = radius
         self.lasttime = time
-        self.health = 50
+        self.health = 5
+        self.lifetime = 1.0
 
     def prediction(self, dt, state=None):
         if state == None:
@@ -54,7 +56,8 @@ class Obsticle:
         return new_state #(new_state, new_cov)
 
     def update(self, state, time, cov):
-        self.health = 50
+        self.health = 5
+        self.lifetime += 1.0
         # (X_k, P_k) = self.prediction( time - self.lasttime )
         # residual = state - np.dot( Obsticle.H, X_k )
         # S_k = np.dot(Obsticle.H, np.dot( P_k, Obsticle.H.T )) + np.eye(X_k.shape[0])
@@ -66,8 +69,8 @@ class Obsticle:
         predicted_state = self.prediction( time - self.lasttime )
         self.state[0] = (state[0] + predicted_state[0])/2
         self.state[1] = (state[1] + predicted_state[1])/2
-        self.state[2] = (state[2] + self.state[2])/2
-        self.state[3] = (state[3] + self.state[3])/2
+        self.state[2] = (state[2] / self.lifetime) + ( ((self.lifetime-1) / self.lifetime) * self.state[2] )
+        self.state[3] = (state[3] / self.lifetime) + ( ((self.lifetime-1) / self.lifetime) * self.state[3] )
         self.lasttime = time
 
 
@@ -86,7 +89,7 @@ class Obsticle:
         self.health -= 1
 
     def is_healthy(self):
-        return self.health > 0
+        return self.health > 0 and np.sqrt( self.state[2]**2 + self.state[3]**2 ) < 2.5
 
     def generate_obsticle_prediction( self, dt, steps ):
         pred = ObsticlePrediction()
@@ -105,6 +108,28 @@ class Obsticle:
             pred.predictions.append( obstacle )
             state = self.prediction( dt, state=state )
         return pred
+
+    def makeMarker( self, dt, steps ):
+        pred = self.generate_obsticle_prediction( dt, steps )
+        marker = Marker()
+        marker.header.frame_id = "/map"
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "obst_tracker"
+        marker.action = Marker.ADD
+        marker.type = Marker.LINE_STRIP
+        marker.scale.x = 0.1
+        marker.color.a = 1.0
+        marker.color.b = 1.0
+
+        marker.points = list()
+        for o in pred.predictions:
+            p = Point()
+            p.z = 0
+            p.x = o.x
+            p.y = o.y
+            marker.points.append( p )
+
+        return marker
 
 def distance(p1, p2):
     return np.sqrt( ( (p1[0]-p2[0]) ** 2 ) + ( (p1[1] - p2[1]) ** 2 ) )
@@ -202,60 +227,55 @@ def update_position(data):
 def cluster_to_object( points ):
     sx = 0
     sy = 0
+    maxDist = 0
     for p in points:
         sx += p[0]
         sy += p[1]
+        for p2 in points:
+            maxDist = max(maxDist, p2)
     cx = sx / len(points)
     cy = sy / len(points)
-    cov = len(points)
-    return ( (cx, cy), cov )
+    return ( (cx, cy), maxDist )
 
+def pubPath( obsticles ):
+    global path_pub
 
+    markerArray = MarkerArray()
+    i = 0
+    for m in map( lambda o: o.makeMarker( 0.25, 20 ), obsticles ):
+        m.id = i
+        i += 1
+        markerArray.markers.append(m)
+    path_pub.publish(markerArray)
 
 def handle_scan_input(data):
     global position_estimate, transformer
     global obsticles
     global map_resolution, world_map
-    if position_estimate == None:
-        print("No position esitmate")
-        return
     time = float(data.header.stamp.secs) + (float(data.header.stamp.nsecs) / (1e9))
     step = (data.angle_max - data.angle_min) / float(len(data.ranges))
     points = polar_to_euclidean( [ data.angle_min + (i * step)  for i in range(len(data.ranges))], data.ranges)
 
-    #points = np.dot( points, np.array( [[ -position_estimate.orientation.x, position_estimate.orientation.y ],
-    #    [-position_estimate.orientation.y, -position_estimate.orientation.x]] ) )
 
-
-
-    t = transformer.getLatestCommonTime("/base_link", "/laser_frame")
-    pos, quart = transformer.lookupTransform("/laser_frame", "/base_link", t)
-    t2 = transformer.getLatestCommonTime("/odom", "/base_link")
-    pos2, quart2 = transformer.lookupTransform("/base_link", "/odom", t2)
-    t3 = transformer.getLatestCommonTime("/odom", "/map")
-    pos3, quart3 = transformer.lookupTransform("/odom", "/map", t3)
+    t = transformer.getLatestCommonTime("laser_frame", "/map")
+    pos, quart = transformer.lookupTransform("/map", "laser_frame", t)
 
     angle = transformations.euler_from_quaternion( quart )[2]
-    angle += transformations.euler_from_quaternion( quart2 )[2]
-    angle += transformations.euler_from_quaternion( quart3 )[2]
     points = rotate_points_about_origin(points, angle)
 
-    pos = (pos[0] + pos2[0] + pos3[0], pos[1] + pos2[1] + pos3[1])
 
-
-    points = translate_points( points, ( pos[0], pos[1] ) )
+    points = translate_points( points, ( -pos[0], -pos[1] ) )
 
     points = subtract_map( points )
 
 
-
-    # emitPointCloud(list(world_map))
+    #emitPointCloud(map( lambda x: ( x[0]*map_resolution, x[1]*map_resolution ), list(world_map)))
     clusters = cluster_points(points, .5)
     found_obsticles = map( cluster_to_object, clusters )
     #emitPointCloud(map(lambda x: x[0], found_obsticles))
     if len(obsticles) > 0:
-         emitPointCloud(map( lambda x: (x.state[0], x.state[1]), obsticles))
-    print("Time %f" % (time))
+          emitPointCloud(map( lambda x: (x.state[0], x.state[1]), obsticles))
+          pubPath( obsticles )
     obsts_living = np.zeros( len(obsticles) )
     for ( c, cov ) in found_obsticles:
         closest = None
@@ -277,7 +297,7 @@ def handle_scan_input(data):
             obsticles[i].age()
 
     obsticles = [ o for o in obsticles if o.is_healthy() ]
-    print( '\n'.join( map( str, obsticles ) ) )
+    #print( '\n'.join( map( str, obsticles ) ) )
 
 
 def handle_obsticle_request(req):
@@ -291,9 +311,11 @@ def handle_obsticle_request(req):
 
 
 
+
 def init_node():
     global world_map, transformer
-    global map_resolution, cloud_pub
+    global map_resolution, cloud_pub, path_pub
+
     global map_pose
     rospy.init_node('obst_tracker')
     rospy.wait_for_service('static_map')
@@ -314,6 +336,7 @@ def init_node():
         print(map_pose)
         world_map = real_map
         cloud_pub = rospy.Publisher("non_map", PointCloud, queue_size=5)
+        path_pub = rospy.Publisher("obst_paths", MarkerArray, queue_size=5)
         transformer = TransformListener()
     except rospy.ServiceException, e:
         print("Service Error: Could not obtain static map")
@@ -322,7 +345,6 @@ def init_node():
 
 def subscribe():
     rospy.Subscriber("/RosAria/lms5XX_1_laserscan", LaserScan, handle_scan_input)
-    rospy.Subscriber("/RosAria/pose", Odometry, update_position)
 
 
 
