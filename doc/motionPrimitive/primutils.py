@@ -43,10 +43,15 @@ class Primitive(object):
         """
         ad = self.config["action_duration"]
         v = (state_v + self.va * 0.5) * ad
-        w = (state_w + self.wa * 0.5) * ad
+        w = (state_w + self.wa * 0.5 + state_h)
         dx = x + (v * math.cos(w))
         dy = y + (v * math.sin(w))
-        h = state_h + w
+        h = self.wa * 0.5 + state_h
+        # if h > 2 * math.pi:
+        #     h -= 2 * math.pi
+        # elif h < 0:
+        #     h += 2 * math.pi
+
 
         return dx, dy, h, state_v + self.va
 
@@ -82,7 +87,11 @@ def read_primitives(filename):
     primitives = [Primitive(i[0], i[1], i[2], config, primitive_entries) for
                   i in primitive_controls]
 
-    return primitives
+    prim_dict = {}
+    for i in primitives:
+        prim_dict[i.name] = i
+
+    return prim_dict
 
 '''
 add by Tianyi Mar / 8 / 2017
