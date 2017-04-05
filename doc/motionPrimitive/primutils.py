@@ -42,13 +42,13 @@ class Primitive(object):
         :return: tuple (x, y, heading)
         """
         ad = self.config["action_duration"]
-        v = state_v * ad + self.va * 0.5
-        w = state_w * ad + self.wa * 0.5
-        dx = x + (v * math.cos(w)) / 0.05
-        dy = y + (v * math.sin(w)) / 0.05
+        v = (state_v + self.va * 0.5) * ad
+        w = (state_w + self.wa * 0.5) * ad
+        dx = x + (v * math.cos(w))
+        dy = y + (v * math.sin(w))
         h = state_h + w
 
-        return dx, dy, h
+        return dx, dy, h, state_v + self.va
 
 
 
@@ -88,9 +88,35 @@ def read_primitives(filename):
 add by Tianyi Mar / 8 / 2017
 '''
 def read_primitives_with_duration(filename):
+    primitive_controls = set()
+    primitive_entries = {}
+
     with open(filename) as f:
         lines = f.readlines()
-    primitives = read_primitives(filename)
+
+    config = {
+       "action_duration":float(lines[0]),
+        "linear_velocity_divisor":float(lines[1]),
+        "angular_velocity_divisor":float(lines[2]),
+        "heading_divisor":float(lines[3]),
+    }
+
+    for line in lines[4:]:
+        elements = line.split("\t")
+        if len(elements) < 10:
+            continue
+
+        p = PrimitiveResult(*(line.split("\t")))
+        primitive_controls.add((p.name, float(p.la), float(p.wa)))
+        path = [(int(i.group(1)), int(i.group(2)))
+                for i in re.finditer("([\-0-9]+), ([\-0-9]+)", p.path)]
+
+        pentry = PrimitiveEntry(float(p.x), float(p.y), float(p.h), path)
+        primitive_entries[(p.name, int(p.vkey), int(p.wkey), int(p.hkey))] = pentry
+
+    primitives = [Primitive(i[0], i[1], i[2], config, primitive_entries) for
+                  i in primitive_controls]
+
     return (primitives, float(lines[0]))
 
 
