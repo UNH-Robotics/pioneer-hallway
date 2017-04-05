@@ -2,6 +2,7 @@
 	<remap from="odom" to="RosAria/pose" />
 	<param name="laserTopic" value="base_scan" />
 	<param name="ariaFactor" value="1" />
+	<param name="primite_file" value="~/catkin_ws/doc/motionPrimitive/primites.txt" />
 	<param name="simulation" value="True" />
 	<param name="amcl/initial_pose_x" value="-2.0" />
 	<param name="amcl/initial_pose_y" value="-0.5" />
@@ -19,6 +20,18 @@
 	<!-- start map server -->
    <arg name="map_file" default="$(find pioneer_hallway)/maps/gazebo_sim.yaml"/>
    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+	
+	<!-- start trajectory server -->
+	<node name="hector_trajectory_server" pkg="hector_trajectory_server" type="hector_trajectory_server" />
+	
+	<!-- start cmd_vel_publisher -->
+	<node name="cmd_vel_publisher" pkg="pioneer_hallway" type="cmd_vel_publisher.py" />
+	
+	<!-- start estop -->
+	<node name="estop" pkg="pioneer_hallway" type="estop.py" />
+	
+	<!-- start controller -->
+	<node name="controller_node" pkg="pioneer_hallway" type="controller_node.py" />
 	
 	<!-- start rviz -->
 	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch">

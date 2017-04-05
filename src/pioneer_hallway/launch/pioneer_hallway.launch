@@ -1,4 +1,6 @@
 <launch> 
+	<param name="primite_file" value="~/catkin_ws/doc/motionPrimitive/primites.txt" />
+	
 	<!-- rosaria node -->
 	<include file="$(find pioneer_hallway)/launch/rosaria_pioneer_hallway.launch"/>
 	
@@ -15,6 +17,18 @@
 	<!--arg name="map_file" default="$(find pioneer_hallway)/maps/kingV2.yaml"/-->
 	<arg name="map_file" default="$(find pioneer_hallway)/maps/kingV2.yaml"/>
 	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+	
+	<!-- start trajectory server -->
+	<node name="hector_trajectory_server" pkg="hector_trajectory_server" type="hector_trajectory_server" />
+	
+	<!-- start cmd_vel_publisher -->
+	<node name="cmd_vel_publisher" pkg="pioneer_hallway" type="cmd_vel_publisher" />
+	
+	<!-- start estop -->
+	<node name="estop" pkg="pioneer_hallway" type="estop" />
+	
+	<!-- start controller -->
+	<node name="controller_node" pkg="pioneer_hallway" type="controller_node.py" />
 	
 	<!-- start rviz -->
 	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch"/>
