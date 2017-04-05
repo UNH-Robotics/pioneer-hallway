@@ -90,6 +90,15 @@ def executive_listener():
     rospy.Subscriber('controller_msg', String, executive_callback)
     rospy.spin()
 
+def rosaria_twist_callback(data):
+    global currentState
+    # rospy.loginfo(rospy.get_caller_id() + 'Get latest twist info: \n' + 
+    #               "linear x: %.2f" % data.twist.twist.linear.x + "\n" + 
+    #               "angular z: %.2f" % data.twist.twist.angular.z)
+    currentState.set_twist(data.twist.twist.linear.x,
+                           data.twist.twist.angular.z, 
+                           time.time())
+        
 def pose_callback(data):
     global currentState
     quaternion = (
@@ -111,6 +120,7 @@ def pose_callback(data):
                          h,
                          time.time(), 
                          data.twist.twist.angular.z)
+
     
 def amclpose_callback(data):
     global currentState
@@ -154,10 +164,11 @@ def twist_callback(data):
     
 def pose_listener():
     global currentState
-    rospy.Subscriber('RosAria/pose', Odometry, pose_callback)
+    currentState = State(1, 1, 1, 1, 1, 1)
+    rospy.Subscriber('RosAria/pose', Odometry, rosaria_twist_callback)
+    #rospy.Subscriber('RosAria/pose', Odometry, pose_callback)
     #rospy.Subscriber('odom', Odometry, pose_callback)
-    #currentState = State(1, 1, 1, 1, 1, 1)
-    #rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclpose_callback)
+    rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclpose_callback)
     #rospy.Subscriber('cmd_vel', Twist, twist_callback)
     rospy.spin()
 
@@ -243,11 +254,19 @@ def model_predictive_controller(refAction, start, end, endClock):
     print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
     return twist
 
+class controller(object):
+    def __init__(self, refAction, start, end, endClock):
+        self.refAction = refAction
+        self.start = start
+        self.end = end
+        self.endClock = endClock
+        
 def bisection_search_controller(refAction, start, end, endClock):
     if end.h > math.pi:
         end.h = end.h - 2 * math.pi
     deltaT = endClock - time.time()
-    goalOffset = float('inf')
+    goalOffset1 = float('inf')
+    goalOffset2 = float('inf')
     goalX_est = 0
     goalY_est = 0
     goalH_est = 0
@@ -276,8 +295,8 @@ def bisection_search_controller(refAction, start, end, endClock):
     bestWIndex = -1;
     bestW = 0
     bestW2 = 0
-    for v in vCandidate:
-        for w in wCandidate:
+    for i, v in enumerate(vCandidate):
+        for j, w in enumerate(wCandidate):
             goalX = start.x + v * deltaT * math.cos(
                 start.h + (w * deltaT) / 2)
             goalY = start.y + v * deltaT * math.sin(
@@ -287,14 +306,20 @@ def bisection_search_controller(refAction, start, end, endClock):
                              math.pow(goalY - end.y, 2.0))
             #disH = abs(goalH - end.h) % (2 * math.pi)
             disH = abs(goalH - end.h) 
-        totalDis = positionWeight * disP + (1 - positionWeight) * disH
-        if totalDis < goalOffset:
-            goalOffset = totalDis
-            twist.linear.x = vCandidate[i]
-            twist.angular.z = wCandidate[i]
-            goalX_est = goalX
-            goalY_est = goalY
-            goalH_est = goalH
+            totalDis = positionWeight * disP + (1 - positionWeight) * disH
+            if totalDis < goalOffset1:
+                goalOffset2 = goalOffset1
+                bestV2 = bestV
+                bestW2 = bestW
+                goalOffset1 = totalDis
+                bestV = v
+                bestW = w
+                bestVIndex = i
+                bestWIndex = j
+            elif totalDis < goalOffset2:
+                goalOffset2 = totalDis
+                bestV2 = v
+                bestW2 = w
         # if vCandidate[i] < 0:
         #     vCandidate[i] = 0
         # #print vCandidate[i], wCandidate[i]
@@ -374,8 +399,8 @@ def move():
 
 def init_motions():
     global duration
-    (primitives, duration) = read_primitives_with_duration(
-        "../../../doc/motionPrimitive/primitives.txt")
+    prim_file = rospy.get_param("primite_file")
+    (primitives, duration) = read_primitives_with_duration(prim_file)
     dupMotions = [[p.name, p.va, p.wa] for p in primitives]
     dupMotions.sort()
     filterMotions = [m for m, _ in itertools.groupby(dupMotions)]
