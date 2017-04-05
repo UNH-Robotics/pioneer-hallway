@@ -25,8 +25,8 @@ cmdVelPub = None
 frame = 'map'
 
 #values in meters
-robotLength = 0.455
-robotWidth = 0.381
+robotLength = 0.511 #value grabbed from /usr/local/Aria/params/p3dx.p
+robotWidth = 0.425 #value grabbed from /usr/local/Aria/params/p3dx.p
 robotLCushion = 0.16
 robotWCushion = 0.12
 robotLengthFromCenter = (robotLength + robotLCushion) / 2
@@ -205,37 +205,39 @@ def sonarLaserCallback(data):
 
 def evaluateReadings(pc):
 	#calculate deltaT
-	deltaT = max(abs((rosAriaPose.twist.twist.linear.x / ariaFactor) / maxDecel), 0.5)
-	timeIncrement = deltaT / 4
-	currTime = timeIncrement
-	while currTime <= deltaT:
-		polygon = calculatePolygons(currTime)
-		#try:
-		#	predictedFramePub.publish(polygon)
-		#except:
-		#	pass
-		minX = 10000
-		minY = 10000
-		maxX = -10000
-		maxY = -10000
-		for point in polygon.polygon.points:
-			if point.x < minX:
-				minX = point.x
-			if point.x > maxX:
-				maxX = point.x
-			if point.y < minY:
-				minY = point.y
-			if point.y > maxY:
-				maxY = point.y
-		for point in pc.points:
-			if (point.x > maxX or point.x < minX or 
-			  point.y > maxY or point.y < minY):
-				continue
-			else:
-				if ((point.x >= minX and point.x <= maxX) and
-				  (point.y >= minY and point.y <= maxY)):
-					triggerEstop()
-		currTime = currTime + timeIncrement
+	currSpeed = rosAriaPose.twist.twist
+	if currSpeed.linear.x <= -0.01 or currSpeed.linear.x >= 0.01:
+		deltaT = max(abs((currSpeed.linear.x / ariaFactor) / maxDecel), 0.5)
+		timeIncrement = deltaT / 4
+		currTime = timeIncrement
+		while currTime <= deltaT:
+			polygon = calculatePolygons(currTime)
+			#try:
+			#	predictedFramePub.publish(polygon)
+			#except:
+			#	pass
+			minX = 10000
+			minY = 10000
+			maxX = -10000
+			maxY = -10000
+			for point in polygon.polygon.points:
+				if point.x < minX:
+					minX = point.x
+				if point.x > maxX:
+					maxX = point.x
+				if point.y < minY:
+					minY = point.y
+				if point.y > maxY:
+					maxY = point.y
+			for point in pc.points:
+				if (point.x > maxX or point.x < minX or 
+				  point.y > maxY or point.y < minY):
+					continue
+				else:
+					if ((point.x >= minX and point.x <= maxX) and
+					  (point.y >= minY and point.y <= maxY)):
+						triggerEstop()
+			currTime = currTime + timeIncrement
 
 def estop():
 	global disablePublisher
@@ -244,6 +246,7 @@ def estop():
 	#global testCloudPub
 	global cmdVelPub	
 	global transformer
+	global ariaFactor
 	
 	#initialize node
 	rospy.init_node('pioneer_estop', anonymous=False)
@@ -255,7 +258,10 @@ def estop():
 	
 	#load configuration parameters
 	laserTopic = rospy.get_param("laserTopic", "RosAria/lms5XX_1_laserscan")
+	ariaFactor = float(rospy.get_param("ariaFactor", "0.7"))
 	sim = rospy.get_param("simulation", "False")
+	
+	rospy.loginfo("%f", ariaFactor)
 	
 	#connect to disable_cmd_vel_publisher service
 	rospy.wait_for_service('disable_cmd_vel_publisher')
