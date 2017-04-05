@@ -46,7 +46,7 @@ class Primitive(object):
         w = (state_w + self.wa * 0.5 + state_h)
         dx = x + (v * math.cos(w))
         dy = y + (v * math.sin(w))
-        h = self.wa + state_h
+        h = self.wa * 0.5 + state_h
         # if h > 2 * math.pi:
         #     h -= 2 * math.pi
         # elif h < 0:
