@@ -31,7 +31,7 @@
 	<node name="estop" pkg="pioneer_hallway" type="estop.py" />
 	
 	<!-- start controller -->
-	<node name="controller_node" pkg="pioneer_hallway" type="controller_node.py" />
+	<!--node name="controller_node" pkg="pioneer_hallway" type="controller_node.py" /-->
 	
 	<!-- start rviz -->
 	<include file="$(find pioneer_hallway)/launch/rviz_pioneer_hallway.launch">
