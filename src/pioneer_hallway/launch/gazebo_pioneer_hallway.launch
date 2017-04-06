@@ -25,10 +25,10 @@
 	<node name="hector_trajectory_server" pkg="hector_trajectory_server" type="hector_trajectory_server" />
 	
 	<!-- start cmd_vel_publisher -->
-	<node name="cmd_vel_publisher" pkg="pioneer_hallway" type="cmd_vel_publisher.py" />
+	<node name="pioneer_hallway_cmd_vel_publisher" pkg="pioneer_hallway" type="cmd_vel_publisher.py" output="screen" />
 	
 	<!-- start estop -->
-	<node name="estop" pkg="pioneer_hallway" type="estop.py" />
+	<node name="pioneer_estop" pkg="pioneer_hallway" type="estop.py" output="screen" />
 	
 	<!-- start controller -->
 	<!--node name="controller_node" pkg="pioneer_hallway" type="controller_node.py" /-->
