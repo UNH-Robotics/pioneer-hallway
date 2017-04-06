@@ -206,7 +206,8 @@ def sonarLaserCallback(data):
 def evaluateReadings(pc):
 	#calculate deltaT
 	currSpeed = rosAriaPose.twist.twist
-	if currSpeed.linear.x <= -0.01 or currSpeed.linear.x >= 0.01:
+	if currSpeed.linear.x <= -0.02 or currSpeed.linear.x >= 0.02:
+		#rospy.loginfo("%f", currSpeed.linear.x)
 		deltaT = max(abs((currSpeed.linear.x / ariaFactor) / maxDecel), 0.5)
 		timeIncrement = deltaT / 4
 		currTime = timeIncrement
