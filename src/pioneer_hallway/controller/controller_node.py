@@ -17,6 +17,7 @@ Desc: 1.  update interface to cmd_vel_publisher node
 """
 import sys
 sys.path.insert(0, "../../../doc/motionPrimitive/")
+#sys.path.insert(0, "doc/motionPrimitive/")
 import rospy
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
@@ -399,7 +400,8 @@ def move():
 
 def init_motions():
     global duration
-    prim_file = rospy.get_param("primitive_file")
+    #prim_file = rospy.get_param("primitive_file")
+    prim_file = "../../../doc/motionPrimitive/primitives.txt"
     (primitives, duration) = read_primitives_with_duration(prim_file)
     dupMotions = [[p.name, p.va, p.wa] for p in primitives]
     dupMotions.sort()

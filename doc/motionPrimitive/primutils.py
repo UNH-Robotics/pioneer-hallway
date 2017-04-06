@@ -95,6 +95,7 @@ def read_primitives(filename):
 
 '''
 add by Tianyi Mar / 8 / 2017
+update by Tianyi Apr / 6 / 2017
 '''
 def read_primitives_with_duration(filename):
     primitive_controls = set()
@@ -106,13 +107,12 @@ def read_primitives_with_duration(filename):
     config = {
        "action_duration":float(lines[0]),
         "linear_velocity_divisor":float(lines[1]),
-        "angular_velocity_divisor":float(lines[2]),
-        "heading_divisor":float(lines[3]),
+        "heading_divisor":float(lines[2]),
     }
 
-    for line in lines[4:]:
+    for line in lines[3:]:
         elements = line.split("\t")
-        if len(elements) < 10:
+        if len(elements) < 9:
             continue
 
         p = PrimitiveResult(*(line.split("\t")))
@@ -121,7 +121,7 @@ def read_primitives_with_duration(filename):
                 for i in re.finditer("([\-0-9]+), ([\-0-9]+)", p.path)]
 
         pentry = PrimitiveEntry(float(p.x), float(p.y), float(p.h), path)
-        primitive_entries[(p.name, int(p.vkey), int(p.wkey), int(p.hkey))] = pentry
+        primitive_entries[(p.name, int(p.vkey), int(p.hkey))] = pentry
 
     primitives = [Primitive(i[0], i[1], i[2], config, primitive_entries) for
                   i in primitive_controls]
