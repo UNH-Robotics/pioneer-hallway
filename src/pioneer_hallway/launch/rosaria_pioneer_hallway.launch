@@ -1,9 +1,9 @@
 <launch>
 	<node pkg="rosaria" type="RosAria" name="RosAria">
 		<param name="publish_aria_lasers" value="true"/>
-		<param name="TicksMM" value="175"/>
-		<param name="RevCount" value="14750"/>
+		<param name="TicksMM" value="126"/>
 		<param name="DriftFactor" value="-20"/>
+		<param name="RevCount" value="16100"/>
 		<param name="cmd_vel_timeout" value="0"/>
 		<param name="trans_accel" value="0.6"/>
 		<param name="trans_decel" value="0.6"/>
