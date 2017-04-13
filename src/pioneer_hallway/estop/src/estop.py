@@ -259,7 +259,7 @@ def estop():
 	
 	#load configuration parameters
 	laserTopic = rospy.get_param("laserTopic", "RosAria/lms5XX_1_laserscan")
-	ariaFactor = float(rospy.get_param("ariaFactor", "0.7"))
+	ariaFactor = float(rospy.get_param("ariaFactor", "1"))
 	sim = rospy.get_param("simulation", "False")
 	
 	rospy.loginfo("%f", ariaFactor)
