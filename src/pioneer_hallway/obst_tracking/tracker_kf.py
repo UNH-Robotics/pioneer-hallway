@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 import rospy
 from pioneer_hallway.msg import *
@@ -11,6 +11,7 @@ from geometry_msgs.msg import *
 from std_msgs.msg import Header
 import numpy as np
 from tf import TransformListener, transformations
+import time as ttime
 
 
 obsticles = []
@@ -30,56 +31,65 @@ sphere_pub = None
 MAX_ACCEPTED_DIST_FACTOR = 0.5
 
 
+
 class Obsticle:
-    F = np.array( [[ 1, 0, .005, 0 ],
+    A = np.array( [[ 1, 0, .005, 0 ],
             [ 0, 1, 0, 0.005 ],
             [ 0, 0, 1, 0 ],
             [ 0, 0, 0, 1 ]])
+    H = np.array( [ [1, 0, 0, 0], [0, 1, 0, 0] ] )
+    Q = np.eye(4)
+    R = np.eye(2)
 
     lognorm = 1.0 / np.log(2)
 
     H = np.array([ 1, 0, 0, 0  ])
-    def __init__(self, x, y, time, cov, radius):
+    def __init__(self, x, y, time, radius):
         #print("Creating Obticle", x, y, time, radius)
-        self.state = np.array([ x, y, 0, 0 ])
-        self.states = [ self.state ]
-        self.cov = np.diag([cov, cov, cov, cov])
+        self.state = np.array([ [x], [y], [0], [0] ])
+        self.cov = np.diag((0.001, 0.001, 0.001, 0.001))
         self.radius = radius
         self.lasttime = time
         self.health = 5
         self.lifetime = 1.0
+        Obsticle.H = np.array( [ [1, 0, 0, 0], [0, 1, 0, 0] ] )
 
-    def prediction(self, dt, state=None):
+    def prediction(self, dt, state=None, cov=None):
         if state == None:
             state = self.state
+        if cov == None:
+            cov = self.cov
         #print("DT = " + str(dt))
-        Obsticle.F[0][2] = dt
-        Obsticle.F[1][3] = dt
-        new_state = np.dot( Obsticle.F, state )
-        # new_cov = np.dot( Obsticle.F, np.dot( self.cov, Obsticle.F.T ) )
-        return new_state #(new_state, new_cov)
 
-    def update(self, state, time, cov):
+        Obsticle.A[0][2] = dt
+        Obsticle.A[1][3] = dt
+        new_state = np.dot( Obsticle.A, state )
+        next_cov = np.dot(Obsticle.A, np.dot(cov, Obsticle.A.T)) + Obsticle.Q
+        return (new_state, next_cov)
+
+    def update(self, state, time, radius):
         self.health = 5
         self.lifetime += 1.0
-        self.states.append(state)
-        if len( self.states ) > 20:
-            self.states.pop(0)
-        self.radius = max( self.radius, cov )
-        # (X_k, P_k) = self.prediction( time - self.lasttime )
-        # residual = state - np.dot( Obsticle.H, X_k )
-        # S_k = np.dot(Obsticle.H, np.dot( P_k, Obsticle.H.T )) + np.eye(X_k.shape[0])
-        #
-        # K_k = np.dot( P_k, np.dot( Obsticle.H.T, np.linalg.inv( S_k ) ) )
-        # self.state = X_k + np.dot( K_k, residual )
-        # self.cov = P_k - np.dot( K_k, np.dot( S_k, K_k.T ) )
-        # self.lasttime = time
-        predicted_state = self.prediction( time - self.lasttime )
-        self.state[0] = (state[0] + predicted_state[0])/2
-        self.state[1] = (state[1] + predicted_state[1])/2
-        self.state[2] = sum([ s[2] for s in self.states ]) / float( len(self.states) )
-        self.state[3] = sum([ s[3] for s in self.states ]) / float( len(self.states) )
+        self.radius = max( self.radius, radius )
+        dt = time - self.lasttime
+
+        Obsticle.A[0][2] = dt
+        Obsticle.A[1][3] = dt
+
+
+        self.state, self.cov = self.prediction( time - self.lasttime )
+        # print("Given " + str(state) + " dt:  " + str( time - self.lasttime ))
+        # print("Predict obst to state " + str(self.state) + "  age: " + str(self.lifetime) + "  H " + str(Obsticle.H))
+        IM = np.dot(Obsticle.H, self.state)
+        # print("IM: " + str( IM ))
+        IS = Obsticle.R + np.dot(Obsticle.H, np.dot(self.cov, Obsticle.H.T))
+        # print("IS: " + str(IS))
+        K = np.dot(self.cov, np.dot(Obsticle.H.T, np.linalg.inv(IS)))
+        # print("Kalman Gain: " + str(K))
+        self.state = self.state + np.dot(K, (state-IM))
+        self.cov = self.cov - np.dot(K, np.dot(IS, K.T))
         self.lasttime = time
+        # print("updated obst to state " + str(self.state) + "  age: " + str(self.lifetime) + "\n\n")
 
 
 
@@ -87,11 +97,12 @@ class Obsticle:
         return str(self.state) + "  health: " + str(self.health)
 
     def dist( self, x, y, t):
-        state = self.prediction(t - self.lasttime)
+        state, cov = self.prediction(t - self.lasttime)
         return np.sqrt( ((x-state[0])**2) + ((y-state[1])**2 ))
 
     def nextState( self, x, y, t ):
-        return np.array( [ x, y, (x - self.state[0]) / ( t - self.lasttime ), ( y - self.state[1] ) / ( t - self.lasttime ) ] )
+        return [[x], [y]]
+        # return np.array( [ [x], [y], [(x - self.state[0]) / ( t - self.lasttime )], [( y - self.state[1] ) / ( t - self.lasttime )] ] )
 
     def age(self):
         self.health -= 1
@@ -110,11 +121,13 @@ class Obsticle:
             obstacle = Obstacle()
             obstacle.x = state[0]
             obstacle.y = state[1]
-            obstacle.r = self.radius + ( self.radius * 0.1 * i) if self.radius > 0 else 0.1
+            obstacle.r = self.radius if self.radius > 0 else 0.1
             obstacle.time = self.lasttime + ( dt * i )
-            obstacle.cov = (((float(i)+1) / (float(steps)+1))) * (1 - ( 1.0 / (1 + np.exp( 3 - (self.lifetime / 60.0) )) ))
+            obstacle.cov = cov[0][0]
+            # print(cov)
             pred.predictions.append( obstacle )
-            state = self.prediction( dt, state=state )
+            state, cov = self.prediction( dt, state=state, cov=cov )
+        # print "-----------------------------------------------------------------------------"
         return pred
 
     def makeMarker( self, dt, steps ):
@@ -132,6 +145,9 @@ class Obsticle:
         sphereList = list()
 
         marker.points = list()
+
+        covMax = max( o.cov for o in pred.predictions )
+
         for o in pred.predictions:
             sphere = Marker()
             sphere.header.frame_id = "/map"
@@ -152,7 +168,7 @@ class Obsticle:
             sphere.color.r = 1.0
             sphere.color.g = 0.0
             sphere.color.b = 1.0
-            sphere.color.a = 1-o.cov
+            sphere.color.a = 1-(o.cov/covMax)
             marker.points.append( p )
             sphereList.append(sphere)
 
@@ -247,7 +263,7 @@ def rotate_points_about_origin( points, theta ):
 
 def update_position(data):
     global position_estimate
-    position_estimate = data.pose.pose
+    position_estimate = data.pose.pose.position
 
 
 
@@ -286,6 +302,7 @@ def handle_scan_input(data):
     global position_estimate, transformer
     global obsticles
     global map_resolution, world_map
+    # tStart = ttime.time()
     time = float(data.header.stamp.secs) + (float(data.header.stamp.nsecs) / (1e9))
     step = (data.angle_max - data.angle_min) / float(len(data.ranges))
     points = polar_to_euclidean( [ data.angle_min + (i * step)  for i in range(len(data.ranges))], data.ranges)
@@ -302,6 +319,10 @@ def handle_scan_input(data):
 
     points = subtract_map( points )
 
+    location = ( pos[0], pos[1] )
+    # print("Location: " + str(location))
+    closeEnough = lambda p: distance(p, location) < 7
+    points = filter( closeEnough, points )
 
     #emitPointCloud(map( lambda x: ( x[0]*map_resolution, x[1]*map_resolution ), list(world_map)))
     clusters = cluster_points(points, .5)
@@ -311,7 +332,7 @@ def handle_scan_input(data):
           emitPointCloud(map( lambda x: (x.state[0], x.state[1]), obsticles))
           pubPath( obsticles )
     obsts_living = np.zeros( len(obsticles) )
-    for c, cov  in found_obsticles:
+    for c, r  in found_obsticles:
         closest = None
         minDist = None
         for i in range(len(obsticles)):
@@ -321,16 +342,17 @@ def handle_scan_input(data):
             # else:
             #     print(obsticles[i].dist(c[0], c[1], time))
         if closest == None:
-            obsticles.append( Obsticle(c[0], c[1], time, 0.1, cov) )
+            obsticles.append( Obsticle(c[0], c[1], time, r) )
         else:
             if time > obsticles[closest].lasttime:
-                obsticles[closest].update( obsticles[closest].nextState( c[0], c[1], time ), time, cov )
+                obsticles[closest].update( obsticles[closest].nextState( c[0], c[1], time ), time, r )
                 obsts_living[closest] = 1
     for i, h in zip( range(len(obsts_living)), obsts_living ):
         if h == 0:
             obsticles[i].age()
 
     obsticles = [ o for o in obsticles if o.is_healthy() ]
+    # print("Processed Obsticals", str(ttime.time() - tStart))
     #print( '\n'.join( map( str, obsticles ) ) )
 
 
@@ -380,6 +402,7 @@ def init_node():
 
 def subscribe():
     rospy.Subscriber("/RosAria/lms5XX_1_laserscan", LaserScan, handle_scan_input)
+    rospy.Subscriber("/RosAria/pose", Odometry, update_position)
 
 
 
