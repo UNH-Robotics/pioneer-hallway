@@ -251,7 +251,8 @@ if __name__ == '__main__':
                "a22,1.9,-0.5,0.9,0,12312",
                "a22,3.0,-0.5,1.0,0,12312"]
         
-        x = predicted_pose[0]
+        x = 0
+        x0 = predicted_pose[0]
         y = str(predicted_pose[1])
         t = 0.25
         a = 0.15
@@ -261,7 +262,7 @@ if __name__ == '__main__':
            # rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             # send the msg to the planner store the time it took
             #cur_clock, action = send_msg_to_planner(master_clock, planner, nbsr)
-            x = -2 + 0.5 * a * math.pow(i * t, 2)
+            x = x0 + 0.5 * a * math.pow(i * t, 2)
             v = a * i * t
             action = "a22," + str(x) + "," +y+ " ," + str(v) + ",0,12312"
             exec_control_pub(action)
