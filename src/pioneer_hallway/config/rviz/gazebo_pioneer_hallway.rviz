@@ -3,7 +3,8 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /LaserScan3
       Splitter Ratio: 0.5
     Tree Height: 463
   - Class: rviz/Selection
@@ -151,7 +152,7 @@ Visualization Manager:
       Min Intensity: 0
       Name: LaserScan
       Position Transformer: XYZ
-      Queue Size: 5
+      Queue Size: 0
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.0299999993
@@ -222,7 +223,7 @@ Visualization Manager:
       Min Intensity: 8.40779079e-45
       Name: LaserScan
       Position Transformer: XYZ
-      Queue Size: 10
+      Queue Size: 0
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.0399999991
@@ -252,7 +253,7 @@ Visualization Manager:
       Min Intensity: 0
       Name: LaserScan
       Position Transformer: XYZ
-      Queue Size: 10
+      Queue Size: 0
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.0399999991

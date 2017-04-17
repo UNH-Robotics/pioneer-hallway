@@ -11,7 +11,7 @@ int main(int argc, char** argv){
 
   const double pi = 3.14159265358979323846264338328 ;
 
-  ros::Rate rate(10.0);
+  ros::Rate rate(60.0);
   while (node.ok()){
     transform.setOrigin( tf::Vector3(0.0, 0.0, 0.0) );
     transformSonar.setOrigin( tf::Vector3(0.0, 0.0, 0.0) );
