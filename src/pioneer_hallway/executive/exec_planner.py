@@ -177,9 +177,9 @@ def send_msg_to_planner(p, nbsr, t_time):
     if planner_finished:
       msg = "STATE\n" 
       if not first_iteration:
-        t_time = t_time + 245
+        t_time = t_time + 495
         msg = msg + str(t_time)
-        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time-245)
+        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time-495)
       else:
         msg = msg + str(t_time)
         msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
@@ -286,13 +286,13 @@ if __name__ == '__main__':
     projected_pose = (predicted_pose[0], predicted_pose[1], vel, predicted_pose[2])
     rospy.loginfo("Executive online...")
     try:
-        while (0.25 >= (time.time() - cur_clock)):
+        while (0.5 >= (time.time() - cur_clock)):
             cur_clock = time.time() 
             if first_iteration:
-              t_time = t_time + 250
+              t_time = t_time + 500
             #send the msg to the planner store the time it took
             success = send_msg_to_planner(planner, nbsr, t_time)
-            time.sleep(0.240)
+            time.sleep(0.480)
             #check for the action to be in the queue
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
             update_cur(action)
