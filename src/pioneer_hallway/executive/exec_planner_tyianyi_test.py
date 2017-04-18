@@ -258,7 +258,7 @@ if __name__ == '__main__':
         a = 0.15
         i = 1
         v = 0
-        while (x < 4):
+        while (x < -33):
            # rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             # send the msg to the planner store the time it took
             #cur_clock, action = send_msg_to_planner(master_clock, planner, nbsr)
