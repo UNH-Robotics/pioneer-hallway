@@ -8,7 +8,7 @@ import rospy
 import math
 import tf
 from std_msgs.msg import String
-from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped, PoseArray, Pose
 from nav_msgs.msg import Path
 from nav_msgs.msg import Odometry
 from nbstreamreader import NonBlockingStreamReader as NBSR
@@ -39,6 +39,8 @@ vel = 0.0
 goal_is_set = True
 planner_finished = True
 first_iteration = True
+end_time = 0
+plan_start_time = 0
 
 ''' 
  t = obst.predictions[i].header.stamp.sec
@@ -84,6 +86,12 @@ plannerPathPub = rospy.Publisher('planner_snake', Path, queue_size=10)
 plannerPathPub2 = rospy.Publisher('planner_snake2', Path, queue_size=10)
 plannerPath = Path()
 plannerPath2 = Path()
+
+plannerPosesPub = rospy.Publisher('planner_poses', PoseArray, queue_size=10)
+
+plannerPoses = PoseArray()
+plannerPoses.header.frame_id = "map"
+
 plannerPath.header.frame_id = "map"
 plannerPath2.header.frame_id = "map"
 odom = rospy.Subscriber('RosAria/pose', Odometry, odomCallBack)
@@ -114,8 +122,23 @@ def update_cur(action):
     rospy.logdebug(str(cur_primitive.wa) + " " + str(cur_primitive.name) + " " + str(planner_action))
     rospy.logdebug(str(predicted_pose[0]) + " " + str(predicted_pose[1]) + " " + str(vel) + " " + str(predicted_pose[2]))
     project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
+    p_pose = action[1].split(' ', 4)
+
+    plan_pose = Pose()
+    plan_pose.position.x = float(p_pose[0])
+    plan_pose.position.y = float(p_pose[1])
+    quaternion = tf.transformations.quaternion_from_euler(0, 0, float(p_pose[3]))
+    plan_pose.orientation.x = quaternion[0]
+    plan_pose.orientation.y = quaternion[1]
+    plan_pose.orientation.z = quaternion[2]
+    plan_pose.orientation.w = quaternion[3]
+    plannerPoses.poses.append(plan_pose)
+    plannerPosesPub.publish(plannerPoses)
+
+
     global projected_pose
-    projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+    #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+    projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
     
 
 def print_projected_pose(delimiter):
@@ -128,7 +151,7 @@ def set_new_goal(p, nbsr, x, y):
   while out == None:
     time.sleep(0.25)
     rospy.logwarn("waiting on planner to update goal")
-    out = nbsr.readline(0.25)
+    (out, t)  = nbsr.readline(0.25)
   rospy.loginfo("planner fired up and ready to go")
   global goal_is_set
   goal_is_set = True
@@ -139,7 +162,7 @@ def send_goal_to_planner(p, nbsr, x, y):
   rospy.loginfo("sending new goal to plan towards: " + msg)
   p.stdin.write(msg)
   try:
-    out = nbsr.readline(0.20)
+    (out, t) = nbsr.readline(0.20)
     rospy.loginfo("from planner: " + out + "\n")
     if out == "READY":
       return out
@@ -152,13 +175,18 @@ def send_goal_to_planner(p, nbsr, x, y):
 
 def send_msg_to_planner(p, nbsr, t_time):
     if planner_finished:
+      msg = "STATE\n" 
       if not first_iteration:
         t_time = t_time + 245
-      msg = "STATE\n" + str(t_time) + ' ' + print_projected_pose(" ") + '\n'
+        msg = msg + str(t_time)
+        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time-245)
+      else:
+        msg = msg + str(t_time)
+        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
       for obst in ObstacleDb:
           msg = msg + "0 " + str(obst.x) + ' ' + str(obst.y) + ' ' + str(obst.r) + ' ' + str(obst.cov) + '\n'
-      msg = msg + "END\n"
-      rospy.loginfo("sending new state to plan to: " + msg)
+      msg = msg + "\nEND\n"
+#      rospy.loginfo("sending new state to plan to: " + msg)
       p.stdin.write(str.encode(msg))
       p.stdin.flush()
     return True
@@ -167,17 +195,19 @@ def check_planner_for_msg(p, nbsr):
     try:
         plan = []
         projection = []
-        out = nbsr.readline(0.01)
+        (out, t) = nbsr.readline(0.01)
+        global end_time
+        end_time = t
         t_time = int(out.split(' ', 1)[1])
         rospy.logdebug("time_stamp_from_planner: " + str(t_time))
         rospy.logdebug(out)
         while out != "END":
-          out = nbsr.readline(0.01)
+          (out, t) = nbsr.readline(0.01)
           plan.append(out)  
-        out = nbsr.readline(0.01)
+        (out, t) = nbsr.readline(0.01)
         rospy.logdebug(out)
         while out != "END":
-          out = nbsr.readline(0.1)
+          (out, t) = nbsr.readline(0.1)
           projection.append(out)
         rospy.logdebug("plan: " + str(plan) + "\n") 
         rospy.logdebug("projection: " + str(projection) + "\n")
@@ -197,12 +227,14 @@ def check_planner_for_msg(p, nbsr):
         exit()
         return (None,t_time, projection, plan)
 
+
 def publish_path(projection, plan):
   plannerPath = Path()
   plannerPath2 = Path()
   plannerPath.header.frame_id = "map"
   plannerPath2.header.frame_id = "map"
-
+  
+  step = plan[0]
   for step in projection:
     if step.split(' ',1)[0] != "END":
       pose = PoseStamped()
@@ -240,7 +272,7 @@ if __name__ == '__main__':
     # give time for the planner to initialize
     # the master clock for the planner
     cur_map_goal = (0, 0)
-    sim_map_goal = (3.89, -0.61)
+    sim_map_goal = (3.89, -0.5)
     kings_map_goal = (-64.5, -39.8)
 
     if simulation_flag == "-simulator":
@@ -254,22 +286,23 @@ if __name__ == '__main__':
     projected_pose = (predicted_pose[0], predicted_pose[1], vel, predicted_pose[2])
     rospy.loginfo("Executive online...")
     try:
-        while (1.25 >= (time.time() - cur_clock)):
+        while (0.25 >= (time.time() - cur_clock)):
             cur_clock = time.time() 
             if first_iteration:
               t_time = t_time + 250
             #send the msg to the planner store the time it took
             success = send_msg_to_planner(planner, nbsr, t_time)
-            time.sleep(0.245)
+            time.sleep(0.240)
             #check for the action to be in the queue
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
             update_cur(action)
+#            rospy.loginfo("planner_time: " + str(planner_start_time - end_time))
             rospy.logdebug("action_from_planner: " + action[0])
             cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + "\n"
             rospy.logdebug("msg_to_controller: " + cont_msg)
             exec_control_pub(cont_msg)
             publish_path(projection, plan)
-            rospy.logdebug(str(time.time() - cur_clock))
+#            rospy.loginfo(str(time.time() - cur_clock))
             #t_time = t_time - 5 
             first_iteration = False
         raise rospy.ROSException("ESTOP")
