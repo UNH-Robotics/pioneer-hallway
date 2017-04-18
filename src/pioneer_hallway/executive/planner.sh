@@ -1,3 +1,3 @@
 #! /bin/bash
 
-java -jar planner.jar -debug $@
+java -jar planner.jar $@
