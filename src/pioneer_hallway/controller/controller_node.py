@@ -43,9 +43,15 @@ motions = defaultdict(list)
 duration = 0.0
 currentState = None
 changePlan = 0
-positionWeight = 0.9
+#positionWeight = 0.33
+#headingWeight = 0.33
+#velocityWeight = 0.33
 samplingNum = 200
-sampleScale = 0.1
+sampleScale_pos = 0.1
+sampleScale_h = 0.1
+disUnit_postion =0.01
+disUnit_heading = 3 * math.pi / 180
+disUnit_velocity = 0.15
 pathFileName = None
 trajectoryFileName = None
 controllerLogName = None
@@ -125,14 +131,6 @@ def pose_callback(data):
     
 def amclpose_callback(data):
     global currentState
-    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
-                  "position x: %.2f" %data.pose.pose.position.x + "\n" +
-                  "position y: %.2f" %data.pose.pose.position.y + "\n" +
-                  "orentation x: %.2f" %data.pose.pose.orientation.x + "\n" +
-                  "orentation y: %.2f" %data.pose.pose.orientation.y + "\n" +
-                  "orentation z: %.2f" %data.pose.pose.orientation.z + "\n" +
-                  "orentation w: %.2f" %data.pose.pose.orientation.w + "\n")
-    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info')
     quaternion = (
         data.pose.pose.orientation.x,
         data.pose.pose.orientation.y,
@@ -140,9 +138,17 @@ def amclpose_callback(data):
         data.pose.pose.orientation.w)
     euler = tf.transformations.euler_from_quaternion(quaternion)
     h = euler[2]
+    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+                  "position x: %.7f" %data.pose.pose.position.x + "\n" +
+                  "position y: %.7f" %data.pose.pose.position.y + "\n" +
+                  # "orientation x: %.7f" %data.pose.pose.orientation.x + "\n" +
+                  # "orientation y: %.7f" %data.pose.pose.orientation.y + "\n" +
+                  # "orientation z: %.7f" %data.pose.pose.orientation.z + "\n" +
+                  # "orientation w: %.7f" %data.pose.pose.orientation.w + "\n" +
+                  "h: %.2f" %h)
     currentState.set_pose(data.pose.pose.position.x,
                           data.pose.pose.position.y,
-                          h,
+                          float("%.2f" % h),
                           time.time())
     # with open(trajectoryFileName, 'a') as f:
     #     f.write( "%.2f" %data.pose.pose.position.x + "," +
@@ -183,25 +189,27 @@ def sampling_based_controller(refAction, start, end, endClock):
     vCandidate = np.random.normal(end.v, sampleScale, samplingNum)
     dh = end.h - start.h
     if dh > 2 * math.pi:
-        dh = dh - 2 * pi
+        dh = dh - 2 * math.pi
     wCandidate = np.random.normal(dh/ duration, sampleScale, samplingNum)
-    for i in range(samplingNum):
-        goalX = start.x + vCandidate[i] * deltaT * math.cos(
-            start.h + (wCandidate[i] * deltaT) / 2)
-        goalY = start.y + vCandidate[i] * deltaT * math.sin(
-            start.h + (wCandidate[i] * deltaT) / 2)
-        goalH = start.h + wCandidate[i] * deltaT
-        disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
-                        math.pow(goalY - end.y, 2.0))
-        disH = abs(goalH - end.h) 
-        totalDis = positionWeight * disP + (1 - positionWeight) * disH
-        if totalDis < goalOffset:
-            goalOffset = totalDis
-            twist.linear.x = vCandidate[i]
-            twist.angular.z = wCandidate[i]
-            goalX_est = goalX
-            goalY_est = goalY
-            goalH_est = goalH
+    # for i in range(samplingNum):
+    #     goalX = start.x + vCandidate[i] * deltaT * math.cos(
+    #         start.h + (wCandidate[i] * deltaT) / 2)
+    #     goalY = start.y + vCandidate[i] * deltaT * math.sin(
+    #         start.h + (wCandidate[i] * deltaT) / 2)
+    #     goalH = start.h + wCandidate[i] * deltaT
+    #     disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
+    #                     math.pow(goalY - end.y, 2.0))
+    #     disH = abs(goalH - end.h) 
+    #     totalDis = positionWeight * disP + (1 - positionWeight) * disH
+    #     if totalDis < goalOffset:
+    #         goalOffset = totalDis
+    #         twist.linear.x = vCandidate[i]
+    #         twist.angular.z = wCandidate[i]
+    #         goalX_est = goalX
+    #         goalY_est = goalY
+    #         goalH_est = goalH
+    twist.linear.x = end.v
+    twist.angular.z = dh/ duration
     print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndT: ", deltaT
     return twist
 
@@ -216,18 +224,26 @@ def model_predictive_controller(refAction, start, end, endClock):
     goalY_est = 0
     goalH_est = 0
     twist = Twist()
-    vCandidate = np.random.normal(start.v + refAction[0] * deltaT,
-                                  sampleScale, samplingNum)
+    refv = start.v + refAction[0] * deltaT
+    vCandidate = np.random.normal(refv, sampleScale_pos, samplingNum)
+    vCandidate = vCandidate.tolist()
+    vCandidate.append(refv)
+    #print vCandidate
+    #print
     dh = (end.h - start.h) / duration
     if dh > 5.3:
         dh = math.pi
     elif dh <-5.3:
         dh = -5.3
-    wCandidate = np.random.normal(dh,
-                                  sampleScale, samplingNum)
-    # wCandidate = np.random.normal(start.w + refAction[1] * deltaT,
-    #                               sampleScale, samplingNum)
-    for i in range(samplingNum):
+    wCandidate = np.random.normal(dh, sampleScale_h, samplingNum)
+    #wCandidate = np.random.uniform( -math.pi / 2, math.pi, samplingNum)
+    #wCandidate = np.random.normal(start.w + refAction[1] * deltaT,
+    #                              sampleScale, samplingNum)
+    
+    wCandidate = wCandidate.tolist()
+    wCandidate.append(dh)
+    #print wCandidate
+    for i in range(samplingNum + 1):
         if vCandidate[i] < 0:
             vCandidate[i] = 0
         #print vCandidate[i], wCandidate[i]
@@ -243,8 +259,13 @@ def model_predictive_controller(refAction, start, end, endClock):
         disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
                         math.pow(goalY - end.y, 2.0))
         #disH = abs(goalH - end.h) % (2 * math.pi)
-        disH = abs(goalH - end.h) 
-        totalDis = positionWeight * disP + (1 - positionWeight) * disH
+        disH = abs(goalH - end.h)
+        disV = abs(acturalV - end.v)
+        totalDis = disP / disUnit_postion + \
+                   disH / disUnit_heading + \
+                   disV / disUnit_velocity
+        if i == samplingNum:
+            print "refresutl: ",acturalV, acturalW, goalX, goalY, goalH, totalDis
         if totalDis < goalOffset:
             goalOffset = totalDis
             twist.linear.x = vCandidate[i]
@@ -252,7 +273,7 @@ def model_predictive_controller(refAction, start, end, endClock):
             goalX_est = goalX
             goalY_est = goalY
             goalH_est = goalH
-    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
+    print "get new action to: ", end.x, end.y, end.v, end.h,"\nrefaction: ", start.v + refAction[0] * deltaT, dh, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
     return twist
 
 class controller(object):
@@ -357,8 +378,11 @@ def move():
     pub = rospy.Publisher('cmd_vel_request', Twist, queue_size=10)
     #pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     # The local controller run at 60hz
-    rate = rospy.Rate(60)
+    rate = rospy.Rate(50)
+    i = 1
     while receivedAction != 'NotReceived' and receivedGoalState != None:
+        print i
+        i += 1
         beginClock = time.time()
         endClock = beginClock + duration
         currentAction = receivedAction

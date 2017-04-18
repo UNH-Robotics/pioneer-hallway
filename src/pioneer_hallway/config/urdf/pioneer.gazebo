@@ -23,7 +23,7 @@
   <gazebo>
     <plugin filename="libgazebo_ros_diff_drive.so" name="differential_drive_controller">
       <alwaysOn>true</alwaysOn>
-      <updateRate>100</updateRate>
+      <updateRate>60</updateRate>
       <leftJoint>base_left_wheel_joint</leftJoint>
       <rightJoint>base_right_wheel_joint</rightJoint>
       <torque>5</torque>
@@ -104,7 +104,7 @@
 		<sensor type="ray" name="head_hokuyo_sonarB">
       <pose>0 0 0 0 0 0</pose>
       <visualize>true</visualize>
-      <update_rate>30</update_rate>
+      <update_rate>60</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -138,7 +138,7 @@
 		<sensor type="ray" name="head_hokuyo_sonarF">
       <pose>0 0 0 0 0 0</pose>
       <visualize>true</visualize>
-      <update_rate>30</update_rate>
+      <update_rate>60</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -178,7 +178,7 @@
     <sensor type="ray" name="head_hokuyo_sensor">
       <pose>0 0 0 0 0 0</pose>
       <visualize>true</visualize>
-      <update_rate>40</update_rate>
+      <update_rate>60</update_rate>
       <ray>
         <scan>
           <horizontal>

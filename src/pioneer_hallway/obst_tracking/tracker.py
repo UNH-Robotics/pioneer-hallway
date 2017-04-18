@@ -21,6 +21,7 @@ map_pose = None
 cloud_pub = None
 path_pub = None
 transformer = None
+sphere_pub = None
 
 
 
@@ -35,10 +36,13 @@ class Obsticle:
             [ 0, 0, 1, 0 ],
             [ 0, 0, 0, 1 ]])
 
+    lognorm = 1.0 / np.log(2)
+
     H = np.array([ 1, 0, 0, 0  ])
     def __init__(self, x, y, time, cov, radius):
         #print("Creating Obticle", x, y, time, radius)
         self.state = np.array([ x, y, 0, 0 ])
+        self.states = [ self.state ]
         self.cov = np.diag([cov, cov, cov, cov])
         self.radius = radius
         self.lasttime = time
@@ -58,6 +62,10 @@ class Obsticle:
     def update(self, state, time, cov):
         self.health = 5
         self.lifetime += 1.0
+        self.states.append(state)
+        if len( self.states ) > 20:
+            self.states.pop(0)
+        self.radius = max( self.radius, cov )
         # (X_k, P_k) = self.prediction( time - self.lasttime )
         # residual = state - np.dot( Obsticle.H, X_k )
         # S_k = np.dot(Obsticle.H, np.dot( P_k, Obsticle.H.T )) + np.eye(X_k.shape[0])
@@ -69,8 +77,8 @@ class Obsticle:
         predicted_state = self.prediction( time - self.lasttime )
         self.state[0] = (state[0] + predicted_state[0])/2
         self.state[1] = (state[1] + predicted_state[1])/2
-        self.state[2] = (state[2] / self.lifetime) + ( ((self.lifetime-1) / self.lifetime) * self.state[2] )
-        self.state[3] = (state[3] / self.lifetime) + ( ((self.lifetime-1) / self.lifetime) * self.state[3] )
+        self.state[2] = sum([ s[2] for s in self.states ]) / float( len(self.states) )
+        self.state[3] = sum([ s[3] for s in self.states ]) / float( len(self.states) )
         self.lasttime = time
 
 
@@ -102,9 +110,9 @@ class Obsticle:
             obstacle = Obstacle()
             obstacle.x = state[0]
             obstacle.y = state[1]
-            obstacle.r = self.radius
+            obstacle.r = self.radius + ( self.radius * 0.1 * i) if self.radius > 0 else 0.1
             obstacle.time = self.lasttime + ( dt * i )
-            obstacle.cov = (float(i)+1) / (float(steps)+1)
+            obstacle.cov = (((float(i)+1) / (float(steps)+1))) * (1 - ( 1.0 / (1 + np.exp( 3 - (self.lifetime / 60.0) )) ))
             pred.predictions.append( obstacle )
             state = self.prediction( dt, state=state )
         return pred
@@ -121,15 +129,34 @@ class Obsticle:
         marker.color.a = 1.0
         marker.color.b = 1.0
 
+        sphereList = list()
+
         marker.points = list()
         for o in pred.predictions:
+            sphere = Marker()
+            sphere.header.frame_id = "/map"
+            sphere.header.stamp = rospy.Time.now()
+            sphere.ns = "obst_tracker"
+            sphere.type = Marker.SPHERE
+            sphere.action = Marker.ADD
             p = Point()
             p.z = 0
             p.x = o.x
             p.y = o.y
+            sphere.pose.position.x = o.x
+            sphere.pose.position.y = o.y
+            sphere.pose.position.z = 0
+            #print(o.r)
+            sphere.scale.x = sphere.scale.y = o.r
+            sphere.scale.z=  0.01
+            sphere.color.r = 1.0
+            sphere.color.g = 0.0
+            sphere.color.b = 1.0
+            sphere.color.a = 1-o.cov
             marker.points.append( p )
+            sphereList.append(sphere)
 
-        return marker
+        return marker, sphereList
 
 def distance(p1, p2):
     return np.sqrt( ( (p1[0]-p2[0]) ** 2 ) + ( (p1[1] - p2[1]) ** 2 ) )
@@ -232,21 +259,28 @@ def cluster_to_object( points ):
         sx += p[0]
         sy += p[1]
         for p2 in points:
-            maxDist = max(maxDist, p2)
+            maxDist = max(maxDist, distance(p, p2))
     cx = sx / len(points)
     cy = sy / len(points)
-    return ( (cx, cy), maxDist )
+    return (cx, cy), maxDist
 
 def pubPath( obsticles ):
-    global path_pub
+    global path_pub, sphere_pub
 
     markerArray = MarkerArray()
+    marker2 = MarkerArray()
     i = 0
-    for m in map( lambda o: o.makeMarker( 0.25, 20 ), obsticles ):
+    for m, l in map( lambda o: o.makeMarker( 0.25, 20 ), obsticles ):
         m.id = i
-        i += 1
+        j = i
+        for s in l:
+            s.id = j
+            j+=1
+            marker2.markers.append(s)
+        i = j + 1
         markerArray.markers.append(m)
     path_pub.publish(markerArray)
+    sphere_pub.publish( marker2 )
 
 def handle_scan_input(data):
     global position_estimate, transformer
@@ -277,7 +311,7 @@ def handle_scan_input(data):
           emitPointCloud(map( lambda x: (x.state[0], x.state[1]), obsticles))
           pubPath( obsticles )
     obsts_living = np.zeros( len(obsticles) )
-    for ( c, cov ) in found_obsticles:
+    for c, cov  in found_obsticles:
         closest = None
         minDist = None
         for i in range(len(obsticles)):
@@ -290,7 +324,7 @@ def handle_scan_input(data):
             obsticles.append( Obsticle(c[0], c[1], time, 0.1, cov) )
         else:
             if time > obsticles[closest].lasttime:
-                obsticles[closest].update( obsticles[closest].nextState( c[0], c[1], time ), time, 0.1 )
+                obsticles[closest].update( obsticles[closest].nextState( c[0], c[1], time ), time, cov )
                 obsts_living[closest] = 1
     for i, h in zip( range(len(obsts_living)), obsts_living ):
         if h == 0:
@@ -314,7 +348,7 @@ def handle_obsticle_request(req):
 
 def init_node():
     global world_map, transformer
-    global map_resolution, cloud_pub, path_pub
+    global map_resolution, cloud_pub, path_pub, sphere_pub
 
     global map_pose
     rospy.init_node('obst_tracker')
@@ -337,6 +371,7 @@ def init_node():
         world_map = real_map
         cloud_pub = rospy.Publisher("non_map", PointCloud, queue_size=5)
         path_pub = rospy.Publisher("obst_paths", MarkerArray, queue_size=5)
+        sphere_pub = rospy.Publisher("obst_sizes", MarkerArray, queue_size=5)
         transformer = TransformListener()
     except rospy.ServiceException, e:
         print("Service Error: Could not obtain static map")

@@ -36,7 +36,6 @@ laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
 
 #value in m/s**2
 maxDecel = 0.6
-ariaFactor = 0.7
 
 #calculates the distance between a point and a line
 #lineEnd and lineStart define the end and start points of the line
@@ -131,7 +130,7 @@ def calculatePolygons(deltaT):
 	
 	#publish polygons
 	#currentFramePub.publish(polyCurr)
-	predictedFramePub.publish(polyPred)
+	#predictedFramePub.publish(polyPred)
 
 	return polyPred
 
@@ -208,37 +207,22 @@ def evaluateReadings(pc):
 	currSpeed = rosAriaPose.twist.twist
 	if currSpeed.linear.x <= -0.02 or currSpeed.linear.x >= 0.02:
 		#rospy.loginfo("%f", currSpeed.linear.x)
-		deltaT = max(abs((currSpeed.linear.x / ariaFactor) / maxDecel), 0.5)
+		deltaT = max(abs((currSpeed.linear.x) / maxDecel), 0.5)
 		timeIncrement = deltaT / 4
 		currTime = timeIncrement
 		while currTime <= deltaT:
 			polygon = calculatePolygons(currTime)
-			#try:
-			#	predictedFramePub.publish(polygon)
-			#except:
-			#	pass
-			minX = 10000
-			minY = 10000
-			maxX = -10000
-			maxY = -10000
-			for point in polygon.polygon.points:
-				if point.x < minX:
-					minX = point.x
-				if point.x > maxX:
-					maxX = point.x
-				if point.y < minY:
-					minY = point.y
-				if point.y > maxY:
-					maxY = point.y
+			A = Point32(polygon.polygon.points[1].x - polygon.polygon.points[0].x, polygon.polygon.points[1].y - polygon.polygon.points[0].y, 0)
+			B = Point32(polygon.polygon.points[3].x - polygon.polygon.points[0].x, polygon.polygon.points[3].y - polygon.polygon.points[0].y, 0)			
+			Asquared = pow(A.x,2) + pow(A.y,2)
+			Bsquared = pow(B.x,2) + pow(B.y,2)
 			for point in pc.points:
-				if (point.x > maxX or point.x < minX or 
-				  point.y > maxY or point.y < minY):
-					continue
-				else:
-					if ((point.x >= minX and point.x <= maxX) and
-					  (point.y >= minY and point.y <= maxY)):
+				p = Point32(point.x - polygon.polygon.points[0].x, point.y - polygon.polygon.points[0].y, 0)
+				if (0 <= p.x * A.x + p.y * A.y <= Asquared):
+					if (0 <= p.x * B.x + p.y * B.y <= Bsquared):	
 						triggerEstop()
 			currTime = currTime + timeIncrement
+		predictedFramePub.publish(polygon)
 
 def estop():
 	global disablePublisher
@@ -247,7 +231,6 @@ def estop():
 	#global testCloudPub
 	global cmdVelPub	
 	global transformer
-	global ariaFactor
 	
 	#initialize node
 	rospy.init_node('pioneer_estop', anonymous=False)
@@ -259,10 +242,7 @@ def estop():
 	
 	#load configuration parameters
 	laserTopic = rospy.get_param("laserTopic", "RosAria/lms5XX_1_laserscan")
-	ariaFactor = float(rospy.get_param("ariaFactor", "0.7"))
 	sim = rospy.get_param("simulation", "False")
-	
-	rospy.loginfo("%f", ariaFactor)
 	
 	#connect to disable_cmd_vel_publisher service
 	rospy.wait_for_service('disable_cmd_vel_publisher')
