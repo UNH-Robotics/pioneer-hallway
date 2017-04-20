@@ -137,8 +137,8 @@ def update_cur(action):
 
 
     global projected_pose
-    #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
-    projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
+    projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+    #projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
     
 
 def print_projected_pose(delimiter):
