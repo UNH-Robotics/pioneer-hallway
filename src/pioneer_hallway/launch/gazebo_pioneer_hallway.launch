@@ -3,6 +3,7 @@
 	<param name="laserTopic" value="base_scan" />
 	<param name="primitive_file" value="doc/motionPrimitive/primitives.txt" />
 	<param name="simulation" value="True" />
+	<param name="maxDeltaPose" value="0.00001" />
 	<param name="amcl/initial_pose_x" value="-2.0" />
 	<param name="amcl/initial_pose_y" value="-0.5" />
 	<param name="amcl/initial_pose_a" value="0" />

@@ -103,8 +103,8 @@
 		<!--IN GAZEBO THESE ARE THE BACK SONARS-->
 		<sensor type="ray" name="head_hokuyo_sonarB">
       <pose>0 0 0 0 0 0</pose>
-      <visualize>true</visualize>
-      <update_rate>60</update_rate>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -137,8 +137,8 @@
 		<!--IN GAZEBO THESE ARE THE FRONT SONARS-->
 		<sensor type="ray" name="head_hokuyo_sonarF">
       <pose>0 0 0 0 0 0</pose>
-      <visualize>true</visualize>
-      <update_rate>60</update_rate>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -177,8 +177,8 @@
   <gazebo reference="laser">
     <sensor type="ray" name="head_hokuyo_sensor">
       <pose>0 0 0 0 0 0</pose>
-      <visualize>true</visualize>
-      <update_rate>60</update_rate>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
       <ray>
         <scan>
           <horizontal>
