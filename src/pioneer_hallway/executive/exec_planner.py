@@ -78,7 +78,7 @@ def odomCallBack(msg):
         pub - our only publisher to give controller actions
         obst_track - assign our callback to the tracker
 '''
-rospy.init_node('executive', anonymous=False)
+rospy.init_node('executive', anonymous=False, log_level=DEBUG)
 rate = rospy.Rate(4)
 pub = rospy.Publisher('controller_msg', String, queue_size=1)
 amcl_pose = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, poseCallBack)
