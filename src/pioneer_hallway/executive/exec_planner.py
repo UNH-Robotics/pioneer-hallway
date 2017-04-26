@@ -78,7 +78,7 @@ def odomCallBack(msg):
         pub - our only publisher to give controller actions
         obst_track - assign our callback to the tracker
 '''
-rospy.init_node('executive', anonymous=False, log_level=rospy.DEBUG)
+rospy.init_node('executive', anonymous=False)
 rate = rospy.Rate(4)
 pub = rospy.Publisher('controller_msg', String, queue_size=1)
 amcl_pose = rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, poseCallBack)
@@ -286,7 +286,7 @@ if __name__ == '__main__':
     projected_pose = (predicted_pose[0], predicted_pose[1], vel, predicted_pose[2])
     rospy.loginfo("Executive online...")
     try:
-        while (0.25 >= (time.time() - cur_clock)):
+        while (0.29 >= (time.time() - cur_clock)):
             cur_clock = time.time() 
             if first_iteration:
               t_time = t_time + 250
