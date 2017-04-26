@@ -121,7 +121,7 @@ class AmclNode
     void runFromBag(const std::string &in_bag_fn);
     
     //Used for position based updates
-    void setMaxDeltaPose(double maxDeltaPose);
+    void setMaxDeltas(double maxDeltaPose, double maxDeltaAngle);
 		void evaluateSensorData();
 
     int process();
@@ -221,6 +221,7 @@ class AmclNode
     bool m_force_update;  // used to temporarily let amcl update samples even when no motion occurs...
     bool force_resample;  
     double max_delta_pose;
+    double max_delta_angle;
     geometry_msgs::Point32 last_published_position;
     geometry_msgs::Point32 last_received_position;
 
@@ -282,6 +283,7 @@ class AmclNode
 		//used for position based updates
 	  void poseCB(const nav_msgs::Odometry& msg);
 		double calculateDeltaDistance();
+		double calculateDeltaAngle();
 
     sensor_msgs::LaserScan* last_laser;
     ros::Time last_laser_received_ts_;
@@ -309,7 +311,9 @@ main(int argc, char** argv)
   ros::NodeHandle nh;
   
   double maxDeltaPose = 0.0;
+  double maxDeltaAngle = 0.0;
   ros::param::param<double>("maxDeltaPose", maxDeltaPose, 0.0);
+  ros::param::param<double>("maxDeltaAngle", maxDeltaAngle, 0.0);
 
   // Override default sigint handler
   signal(SIGINT, sigintHandler);
@@ -320,7 +324,7 @@ main(int argc, char** argv)
 
   if (argc == 1)
   {
-		amcl_node_ptr->setMaxDeltaPose(maxDeltaPose);
+		amcl_node_ptr->setMaxDeltas(maxDeltaPose, maxDeltaAngle);
     // run using ROS input
     ros::Rate loop_rate(60);
 		while (ros::ok())
@@ -499,29 +503,38 @@ double AmclNode::calculateDeltaDistance()
 							pow(last_published_position.y - last_received_position.y, 2));
 }
 
+double AmclNode::calculateDeltaAngle()
+{
+	return abs(last_published_position.z - last_received_position.z);
+}
+
 void AmclNode::evaluateSensorData()
 {
 	double d = calculateDeltaDistance();
+	double a = calculateDeltaAngle();
 	//ROS_INFO("%f   %f", d, max_delta_pose);
-	if (d > max_delta_pose && last_laser != NULL)
+	if ((d > max_delta_pose || a > max_delta_angle) && last_laser != NULL)
 	{
 		last_published_position.x = last_received_position.x;
 		last_published_position.y = last_received_position.y;
+		last_published_position.z = last_received_position.z;
 		m_force_update = true;
 		force_resample = true;
 		evaluateScan();
 	}
 }
 
-void AmclNode::setMaxDeltaPose(double maxDeltaPose)
+void AmclNode::setMaxDeltas(double maxDeltaPose, double maxDeltaAngle)
 {
 	max_delta_pose = maxDeltaPose;
+	max_delta_angle = maxDeltaAngle;
 }
 
 void AmclNode::poseCB(const nav_msgs::Odometry& msg)
 {
 	last_received_position.x = msg.pose.pose.position.x;
 	last_received_position.y = msg.pose.pose.position.y;
+	last_received_position.z = msg.pose.pose.orientation.z;
 }
 
 void AmclNode::evaluateScan()
