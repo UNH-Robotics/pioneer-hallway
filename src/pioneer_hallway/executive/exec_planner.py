@@ -137,8 +137,8 @@ def update_cur(action):
 
 
     global projected_pose
-    projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
-    #projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
+    #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+    projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
     
 
 def print_projected_pose(delimiter):
@@ -297,9 +297,9 @@ if __name__ == '__main__':
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
             update_cur(action)
 #            rospy.loginfo("planner_time: " + str(planner_start_time - end_time))
-            rospy.logdebug("action_from_planner: " + action[0])
+            rospy.loginfo("action_from_planner: " + action[0])
             cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + "\n"
-            rospy.logdebug("msg_to_controller: " + cont_msg)
+            rospy.loginfo("msg_to_controller: " + cont_msg)
             exec_control_pub(cont_msg)
             publish_path(projection, plan)
 #            rospy.loginfo(str(time.time() - cur_clock))
