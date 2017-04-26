@@ -186,7 +186,8 @@ def send_msg_to_planner(p, nbsr, t_time):
       else:
         msg = msg + str(t_time)
         msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
-      for obst in ObstacleDb:
+      for obst in ObstacleDb.result.obstacles:
+        for prediction in obst.predictions:
           msg = msg + "0 " + str(obst.x) + ' ' + str(obst.y) + ' ' + str(obst.r) + ' ' + str(obst.cov) + '\n'
       msg = msg + "\nEND\n"
 #      rospy.loginfo("sending new state to plan to: " + msg)
@@ -259,8 +260,8 @@ def publish_path(projection, plan):
 if __name__ == '__main__':
     # wait for services before starting up ...
     rospy.loginfo("Waiting for services before starting up ...")
-    #rospy.wait_for_service('get_obstacles')
-    #ObstacleDb = obstacles(0.1, 1)
+    rospy.wait_for_service('get_obstacles')
+    ObstacleDb = obstacles(0.1, 1)
     # fork and create a child subprocess of the planner
     rospy.loginfo("Running Planner with 3s startup time...")
     planner = Popen(["./planner.sh", simulation_flag],
