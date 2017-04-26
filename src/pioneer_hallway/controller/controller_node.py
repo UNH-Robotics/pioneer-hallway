@@ -43,12 +43,13 @@ motions = defaultdict(list)
 duration = 0.0
 currentState = None
 changePlan = 0
+getNewState = 0
 #positionWeight = 0.33
 #headingWeight = 0.33
 #velocityWeight = 0.33
 samplingNum = 200
 sampleScale_pos = 0.1
-sampleScale_h = 0.1
+sampleScale_h = 0.01
 disUnit_postion =0.01
 disUnit_heading = 3 * math.pi / 180
 disUnit_velocity = 0.15
@@ -108,6 +109,7 @@ def rosaria_twist_callback(data):
         
 def pose_callback(data):
     global currentState
+    global getNewState
     quaternion = (
         data.pose.pose.orientation.x,
         data.pose.pose.orientation.y,
@@ -127,10 +129,12 @@ def pose_callback(data):
                          h,
                          time.time(), 
                          data.twist.twist.angular.z)
+    getNewState = 1
 
     
 def amclpose_callback(data):
     global currentState
+    global getNewState
     quaternion = (
         data.pose.pose.orientation.x,
         data.pose.pose.orientation.y,
@@ -138,18 +142,19 @@ def amclpose_callback(data):
         data.pose.pose.orientation.w)
     euler = tf.transformations.euler_from_quaternion(quaternion)
     h = euler[2]
-    rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
-                  "position x: %.7f" %data.pose.pose.position.x + "\n" +
-                  "position y: %.7f" %data.pose.pose.position.y + "\n" +
-                  # "orientation x: %.7f" %data.pose.pose.orientation.x + "\n" +
-                  # "orientation y: %.7f" %data.pose.pose.orientation.y + "\n" +
-                  # "orientation z: %.7f" %data.pose.pose.orientation.z + "\n" +
-                  # "orientation w: %.7f" %data.pose.pose.orientation.w + "\n" +
-                  "h: %.2f" %h)
+    # rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
+    #               "position x: %.7f" %data.pose.pose.position.x + "\n" +
+    #               "position y: %.7f" %data.pose.pose.position.y + "\n" +
+    #               # "orientation x: %.7f" %data.pose.pose.orientation.x + "\n" +
+    #               # "orientation y: %.7f" %data.pose.pose.orientation.y + "\n" +
+    #               # "orientation z: %.7f" %data.pose.pose.orientation.z + "\n" +
+    #               # "orientation w: %.7f" %data.pose.pose.orientation.w + "\n" +
+    #               "h: %.2f" %h)
     currentState.set_pose(data.pose.pose.position.x,
                           data.pose.pose.position.y,
                           float("%.2f" % h),
                           time.time())
+    getNewState = 1
     # with open(trajectoryFileName, 'a') as f:
     #     f.write( "%.2f" %data.pose.pose.position.x + "," +
     #              "%.2f" %data.pose.pose.position.y + "," + 
@@ -276,104 +281,189 @@ def model_predictive_controller(refAction, start, end, endClock):
     print "get new action to: ", end.x, end.y, end.v, end.h,"\nrefaction: ", start.v + refAction[0] * deltaT, dh, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
     return twist
 
-class controller(object):
+class Controller(object):
     def __init__(self, refAction, start, end, endClock):
         self.refAction = refAction
         self.start = start
-        self.end = end
         self.endClock = endClock
-        
-def bisection_search_controller(refAction, start, end, endClock):
-    if end.h > math.pi:
-        end.h = end.h - 2 * math.pi
-    deltaT = endClock - time.time()
-    goalOffset1 = float('inf')
-    goalOffset2 = float('inf')
-    goalX_est = 0
-    goalY_est = 0
-    goalH_est = 0
-    twist = Twist()
-    vCandidate = []
-    wCandidate = []
-    vMean = start.v + refAction[0] * deltaT
-    vSmallD = 0.2
-    vMax = 2.2
-    wMean = start.w + refAction[1] * deltaT
-    wSmallD = 0.2
-    wMax = 5.3 #300 degree per sec
-    vCandidate.append(-vMax)
-    vCandidate.append(vMean - vSmallD)
-    vCandidate.append(vMean)
-    vCandidate.append(vMean + vSmallD)
-    vCandidate.append(vMax)
-    wCandidate.append(-wMax)
-    wCandidate.append(wMean - wSmallD)
-    wCandidate.append(wMean)
-    wCandidate.append(wMean + wSmallD)
-    wCandidate.append(wMax)
-    bestVIndex = -1;
-    bestV = 0
-    bestV2 = 0
-    bestWIndex = -1;
-    bestW = 0
-    bestW2 = 0
-    for i, v in enumerate(vCandidate):
-        for j, w in enumerate(wCandidate):
-            goalX = start.x + v * deltaT * math.cos(
-                start.h + (w * deltaT) / 2)
-            goalY = start.y + v * deltaT * math.sin(
-                start.h + (w * deltaT) / 2)
-            goalH = start.h + w * deltaT
-            disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
-                             math.pow(goalY - end.y, 2.0))
-            #disH = abs(goalH - end.h) % (2 * math.pi)
-            disH = abs(goalH - end.h) 
-            totalDis = positionWeight * disP + (1 - positionWeight) * disH
-            if totalDis < goalOffset1:
-                goalOffset2 = goalOffset1
-                bestV2 = bestV
-                bestW2 = bestW
-                goalOffset1 = totalDis
-                bestV = v
-                bestW = w
-                bestVIndex = i
-                bestWIndex = j
-            elif totalDis < goalOffset2:
-                goalOffset2 = totalDis
-                bestV2 = v
-                bestW2 = w
-        # if vCandidate[i] < 0:
-        #     vCandidate[i] = 0
-        # #print vCandidate[i], wCandidate[i]
-        # #acturalV = (start.v + vCandidate[i]) / 2
-        # #acturalW = (start.w + wCandidate[i]) / 2
-        # acturalV = vCandidate[i]
-        # acturalW = wCandidate[i]
-        # goalX = start.x + acturalV * deltaT * math.cos(
-        #     start.h + (acturalW * deltaT) / 2)
-        # goalY = start.y + acturalV * deltaT * math.sin(
-        #     start.h + (acturalW * deltaT) / 2)
-        # goalH = start.h + acturalW * deltaT
-        # disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
-        #                 math.pow(goalY - end.y, 2.0))
-        # #disH = abs(goalH - end.h) % (2 * math.pi)
-        # disH = abs(goalH - end.h) 
-        # totalDis = positionWeight * disP + (1 - positionWeight) * disH
-        # if totalDis < goalOffset:
-        #     goalOffset = totalDis
-        #     twist.linear.x = vCandidate[i]
-        #     twist.angular.z = wCandidate[i]
-        #     goalX_est = goalX
-        #     goalY_est = goalY
-        #     goalH_est = goalH
-    print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndeltaT","%.2f" % deltaT
-    return twist
+        self.deltaT = endClock - time.time()
+        if end.h > math.pi:
+            end.h = end.h - 2 * math.pi
+        self.end = end
+
+    def forwardSim(self, x, y, vwType):
+        v = 0
+        w = 0
+        if vwType == "v":
+            v = x
+            w = y
+        else:
+            v = y
+            w = x            
+        goalX = self.start.x + \
+                v * self.deltaT * math.cos(self.start.h + (w * self.deltaT) / 2)
+        goalY = self.start.y + \
+                v * self.deltaT * math.sin(self.start.h + (w * self.deltaT) / 2)
+        goalH = self.start.h + w * self.deltaT
+        disP = math.sqrt(math.pow(goalX - self.end.x, 2.0) +
+                        math.pow(goalY - self.end.y, 2.0))
+        disH = abs(goalH - self.end.h)
+        disV = abs(v - self.end.v)
+        totalDis = disP / disUnit_postion + \
+                   disH / disUnit_heading + \
+                   disV / disUnit_velocity
+        return totalDis
+
+    def bracketVW(self, x1, x2, y, vwType):
+        m = (x1 + x2) / 2
+        f1 = self.forwardSim(x1, y, vwType)
+        fm = self.forwardSim(m, y, vwType)
+        f2 = self.forwardSim(x2, y, vwType)
+        if fm < f1 and fm < f2:
+            return (x1, x2, m)
+        elif f1 < fm and f1 < f2:
+            return (2 * x1 - x2,m, x1)
+        elif f2 < fm and f2 < f1:
+            return (m, 2 * x2 - x1, x2)
+        return (-1,-1,-1)
+
+    def refineEstVW(self, l, m, r, y, vwType, minRange, minDeltaF):
+        deltaF = self.forwardSim(m, y, vwType)
+        i = 0
+        bestF = 1000
+        while abs(l - r) > minRange and deltaF > minDeltaF:
+            #print "i f refine", i, bestF
+            lm = (l + m) / 2
+            fm = self.forwardSim(m, y, vwType)
+            flm = self.forwardSim(lm, y, vwType)
+            if flm < fm:
+                r = m
+                m = lm
+                deltaF = abs(fm - flm)
+                bestF = flm
+                i += 1
+                continue
+            mr = (m + r) / 2
+            fmr = self.forwardSim(mr, y, vwType)
+            if fmr < fm:
+                l = m
+                m = mr
+                deltaF = abs(fm - fmr)
+                bestF = fmr
+                i += 1
+                continue
+            break
+        return (l, m, r, i, bestF)
+
+    def bisection_search(self, v1, v2, w1, w2, vMax, wMax):
+        i = 100
+        vl = v1
+        vm = v1
+        vr = v2
+        wl = w1
+        wm = w1
+        wr = w2
+        bestF = 1000
+        vwType = "v"
+        if v1 == v2:
+            vwType = "w"
+            vl = -vMax
+            vr = vMax
+        elif w1 == w2:
+            vwType = "v"
+            wl = -wMax
+            wr = wMax
+        j = 0
+        while(i > 0):
+            #print "j, i: ", j, i, vwType
+            tempF = 1000
+            if vwType == "v":
+                if j == 0: 
+                    (vl, vm, vr) = self.bracketVW(vl, vr, wm, vwType)
+                (vl, vm, vr, i, tempF) = self.refineEstVW(vl, vm, vr, \
+                                                          wm, vwType, 0.01, 0.01)
+                vwType = "w"
+            else:
+                if j == 0: 
+                    (wl, wm, wr) = self.bracketVW(wl, wr, vm, vwType)
+                (wl, wm, wr, i, tempF) = self.refineEstVW(wl, wm, wr, \
+                                                          vm, vwType, 0.01, 0.01)
+                vwType = "v"
+            if i > 0:
+                bestF = tempF
+            j += 1
+            #print bestF
+            #print vm, wm, vl, vr, wl, wr
+        return(vm, wm, bestF)
+
+    def bisection_search_controller(self):
+        goalOffset1 = float('inf')
+        goalOffset2 = float('inf')
+        goalX_est = 0
+        goalY_est = 0
+        goalH_est = 0
+        twist = Twist()
+        vCandidate = []
+        wCandidate = []
+        vMean = self.start.v + self.refAction[0] * self.deltaT
+        vSmallD = 0.2
+        vMax = 2.2
+        dh = (self.end.h - self.start.h) / duration
+        if dh > 5.3:
+            dh = math.pi
+        elif dh <-5.3:
+            dh = -5.3
+        wMean = dh
+        wSmallD = 0.2
+        wMax = 5.3 #300 degree per sec
+        vCandidate.append(-vMax)
+        vCandidate.append(vMean - vSmallD)
+        vCandidate.append(vMean)
+        vCandidate.append(vMean + vSmallD)
+        vCandidate.append(vMax)
+        wCandidate.append(-wMax)
+        wCandidate.append(wMean - wSmallD)
+        wCandidate.append(wMean)
+        wCandidate.append(wMean + wSmallD)
+        wCandidate.append(wMax)
+        bestV = 0
+        bestV2 = 0
+        bestW = 0
+        bestW2 = 0
+        for i, v in enumerate(vCandidate):
+            for j, w in enumerate(wCandidate):
+                totalDis = self.forwardSim(v, w, "v")
+                if totalDis < goalOffset1:
+                    goalOffset2 = goalOffset1
+                    bestV2 = bestV
+                    bestW2 = bestW
+                    goalOffset1 = totalDis
+                    bestV = v
+                    bestW = w
+                elif totalDis < goalOffset2:
+                    goalOffset2 = totalDis
+                    bestV2 = v
+                    bestW2 = w
+        #print bestV, bestV2, bestW, bestW2
+        (tv, tw, bestF) = self.bisection_search(bestV, bestV2, bestW, bestW2, \
+                                                vMax, wMax)
+        twist.linear.x = tv
+        twist.angular.z = tw
+        print "goal state: ", self.end.x, self.end.y, self.end.v, self.end.h, \
+            "\naction: ", twist.linear.x, twist.angular.z, \
+            "\noffset", bestF,\
+            "\nstartvw: ", self.start.v, self.start.w, \
+            "\nstartxyh: ", self.start.x, self.start.y, self.start.h, \
+            "\nprim: ", self.refAction[0], self.refAction[1], \
+            "\ndeltaT","%.2f" % self.deltaT
+        return twist
 
 def move():
     global receivedAction
-    global receivedGoalState
+    global receivedGoalState 
     global changePlan
     global currentState
+    global getNewState
     #here,we publish actions to the topic 'cmd_vel_request'
     pub = rospy.Publisher('cmd_vel_request', Twist, queue_size=10)
     #pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
@@ -400,23 +490,30 @@ def move():
             if changePlan:
                 changePlan = 0
                 break
-            # motion= sampling_based_controller(motions[currentAction],
-            #                                   currentState,
-            #                                   goalState,
-            #                                   endClock)
-            motion= model_predictive_controller(motions[currentAction],
-                                                currentState,
-                                                goalState,
-                                                endClock)
-            # rospy.loginfo("controller publish action: \n" + 
-            #               "linear x: %.2f" % (motion.linear.x) + "\n" + 
-            #               "linear y: %.2f" % motion.linear.y+"\n"+
-            #               "linear z: %.2f" % motion.linear.z+"\n"+
-            #               "angular x: %.2f" % motion.angular.x+"\n"+
-            #               "angular y: %.2f" % motion.angular.y+"\n"+
-            #               "angular z: %.2f" % motion.angular.z+"\n" +
-            #               "duration: " + str(duration))
-            pub.publish(motion)
+            if getNewState: 
+                # motion= sampling_based_controller(motions[currentAction],
+                #                                   currentState,
+                #                                   goalState,
+                #                                   endClock)
+                motion= model_predictive_controller(motions[currentAction],
+                                                    currentState,
+                                                    goalState,
+                                                    endClock)
+                # biController = Controller(motions[currentAction],
+                #                                     currentState,
+                #                                     goalState,
+                #                                     endClock)
+                # motion = biController.bisection_search_controller()
+                # rospy.loginfo("controller publish action: \n" + 
+                #               "linear x: %.2f" % (motion.linear.x) + "\n" + 
+                #               "linear y: %.2f" % motion.linear.y+"\n"+
+                #               "linear z: %.2f" % motion.linear.z+"\n"+
+                #               "angular x: %.2f" % motion.angular.x+"\n"+
+                #               "angular y: %.2f" % motion.angular.y+"\n"+
+                #               "angular z: %.2f" % motion.angular.z+"\n" +
+                #               "duration: " + str(duration))
+                pub.publish(motion)
+                getNewState = 0
             rate.sleep()
     rospy.logerr("Not Received Action!")
     disable_motors = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
