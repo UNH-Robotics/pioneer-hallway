@@ -138,9 +138,9 @@ def update_cur(action, plan):
     plannerPosesPub.publish(plannerPoses)
 
     global projected_pose
-    projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
+    #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
     #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
-    #projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
+    projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
     print(projected_pose)
     
 
@@ -186,7 +186,7 @@ def send_msg_to_planner(p, nbsr, t_time):
       else:
         msg = msg + str(t_time)
         msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
-      for obst in ObstacleDb:
+      for obst in ObstacleDb.obstacles.predictions:
           msg = msg + "0 " + str(obst.x) + ' ' + str(obst.y) + ' ' + str(obst.r) + ' ' + str(obst.cov) + '\n'
       msg = msg + "\nEND\n"
 #      rospy.loginfo("sending new state to plan to: " + msg)
