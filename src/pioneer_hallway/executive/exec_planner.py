@@ -186,7 +186,7 @@ def send_msg_to_planner(p, nbsr, t_time):
       else:
         msg = msg + str(t_time)
         msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
-      for obst in ObstacleDb.obstacles.predictions:
+      for obst in ObstacleDb:
           msg = msg + "0 " + str(obst.x) + ' ' + str(obst.y) + ' ' + str(obst.r) + ' ' + str(obst.cov) + '\n'
       msg = msg + "\nEND\n"
 #      rospy.loginfo("sending new state to plan to: " + msg)
