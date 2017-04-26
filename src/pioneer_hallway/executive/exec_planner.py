@@ -277,7 +277,7 @@ if __name__ == '__main__':
     # the master clock for the planner
     cur_map_goal = (0, 0)
     sim_map_goal = (3.89, -0.5)
-    kings_map_goal = (-64.5, -39.8)
+    kings_map_goal = (6, 3)
 
     if simulation_flag == "-simulator":
       cur_map_goal = sim_map_goal
