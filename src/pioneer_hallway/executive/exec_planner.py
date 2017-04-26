@@ -111,7 +111,7 @@ def obstacles(dt, steps):
 def exec_control_pub(action):
     pub.publish(action)
 
-def update_cur(action):
+def update_cur(action, plan):
     rospy.logdebug("update_cur action: " + str(action))
     planner_action = action[0]
     state = (str(predicted_pose[0]), str(predicted_pose[1]), str(vel), str(predicted_pose[2]))
@@ -121,7 +121,9 @@ def update_cur(action):
     cur_primitive = primitives[planner_action]
     rospy.logdebug(str(cur_primitive.wa) + " " + str(cur_primitive.name) + " " + str(planner_action))
     rospy.logdebug(str(predicted_pose[0]) + " " + str(predicted_pose[1]) + " " + str(vel) + " " + str(predicted_pose[2]))
-    project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
+    #project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
+    next_state = plan[1].split(' ', 4)
+     
     p_pose = action[1].split(' ', 4)
 
     plan_pose = Pose()
@@ -135,10 +137,11 @@ def update_cur(action):
     plannerPoses.poses.append(plan_pose)
     plannerPosesPub.publish(plannerPoses)
 
-
     global projected_pose
-    projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
-    #projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
+    #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
+    #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+    projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
+    print(projected_pose)
     
 
 def print_projected_pose(delimiter):
@@ -295,7 +298,7 @@ if __name__ == '__main__':
             time.sleep(0.240)
             #check for the action to be in the queue
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
-            update_cur(action)
+            update_cur(action, plan)
 #            rospy.loginfo("planner_time: " + str(planner_start_time - end_time))
             rospy.logdebug("action_from_planner: " + action[0])
             cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + "\n"

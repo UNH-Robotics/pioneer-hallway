@@ -38,7 +38,6 @@ class Obsticle:
             [ 0, 0, 1, 0 ],
             [ 0, 0, 0, 1 ]])
     H = np.array( [ [1, 0, 0, 0], [0, 1, 0, 0] ] )
-    Q = np.eye(4)
     R = np.eye(2)
 
     lognorm = 1.0 / np.log(2)
@@ -47,7 +46,8 @@ class Obsticle:
     def __init__(self, x, y, time, radius):
         #print("Creating Obticle", x, y, time, radius)
         self.state = np.array([ [x], [y], [0], [0] ])
-        self.cov = np.diag((0.001, 0.001, 0.001, 0.001))
+        self.cov = np.eye(4) / 4
+        self.Q = np.eye(4)
         self.radius = radius
         self.lasttime = time
         self.health = 5
@@ -64,12 +64,13 @@ class Obsticle:
         Obsticle.A[0][2] = dt
         Obsticle.A[1][3] = dt
         new_state = np.dot( Obsticle.A, state )
-        next_cov = np.dot(Obsticle.A, np.dot(cov, Obsticle.A.T)) + Obsticle.Q
+        next_cov = np.dot(Obsticle.A, np.dot(cov, Obsticle.A.T)) + self.Q
         return (new_state, next_cov)
 
     def update(self, state, time, radius):
         self.health = 5
         self.lifetime += 1.0
+        self.Q = np.eye(4) / (self.lifetime * 1.4 )
         self.radius = max( self.radius, radius )
         dt = time - self.lasttime
 
@@ -98,7 +99,19 @@ class Obsticle:
 
     def dist( self, x, y, t):
         state, cov = self.prediction(t - self.lasttime)
-        return np.sqrt( ((x-state[0])**2) + ((y-state[1])**2 ))
+        theta = np.arctan2( x - state[0], y - state[1] )
+        nx = (np.cos(theta) * self.radius) + state[0]
+        ny = (np.sin(theta) * self.radius) + state[1]
+        var = np.sqrt( cov[0][0] * cov[2][2] )
+        #var = cov[0][0]
+        px = (1.0/np.sqrt( 2 * np.pi * var )) * np.exp(-( ((x-nx)**2) / (2 * var) ))
+        py = (1.0/np.sqrt( 2 * np.pi * var )) * np.exp(-( ((y-ny)**2) / (2 * var) ))
+
+        # px = (1.0/np.sqrt( 2 * np.pi * cov[0][0] )) * np.exp(-( ((x-state[0])**2) / (2 * cov[0][0]) ))
+        # py = (1.0/np.sqrt( 2 * np.pi * cov[0][0] )) * np.exp(-( ((y-state[1])**2) / (2 * cov[0][0]) ))
+        # print(px[0], py[0], (px[0]*py[0]))
+        return 1 - (px[0] * py[0])
+        # return np.sqrt( ((x-state[0])**2) + ((y-state[1])**2 ))
 
     def nextState( self, x, y, t ):
         return [[x], [y]]
@@ -123,10 +136,16 @@ class Obsticle:
             obstacle.y = state[1]
             obstacle.r = self.radius if self.radius > 0 else 0.1
             obstacle.time = self.lasttime + ( dt * i )
-            obstacle.cov = cov[0][0]
-            # print(cov)
+            obstacle.cov = np.sqrt(cov[0][0] * cov[2][2])
+            # print(obstacle.cov)
             pred.predictions.append( obstacle )
             state, cov = self.prediction( dt, state=state, cov=cov )
+            # if obstacle.cov < (10 * self.radius):
+            #     state, cov = self.prediction( dt, state=state, cov=cov )
+            # else:
+            #     state, _ = self.prediction( dt, state=state, cov=cov )
+        print(pred.predictions[-1].cov)
+
         # print "-----------------------------------------------------------------------------"
         return pred
 
@@ -163,15 +182,15 @@ class Obsticle:
             sphere.pose.position.y = o.y
             sphere.pose.position.z = 0
             #print(o.r)
-            sphere.scale.x = sphere.scale.y = o.r
-            sphere.scale.z=  0.01
+            sphere.scale.x = sphere.scale.y = o.r * 2
+            sphere.scale.z=  o.r * 2
             sphere.color.r = 1.0
             sphere.color.g = 0.0
             sphere.color.b = 1.0
-            sphere.color.a = 1-(o.cov/covMax)
+            sphere.color.a = min(1, (o.r**2) / ((o.cov/2)**2) )
             marker.points.append( p )
             sphereList.append(sphere)
-
+        sphereList = sphereList[0::2]
         return marker, sphereList
 
 def distance(p1, p2):
@@ -278,7 +297,7 @@ def cluster_to_object( points ):
             maxDist = max(maxDist, distance(p, p2))
     cx = sx / len(points)
     cy = sy / len(points)
-    return (cx, cy), maxDist
+    return (cx, cy), maxDist/2
 
 def pubPath( obsticles ):
     global path_pub, sphere_pub
@@ -305,7 +324,7 @@ def handle_scan_input(data):
     # tStart = ttime.time()
     time = float(data.header.stamp.secs) + (float(data.header.stamp.nsecs) / (1e9))
     step = (data.angle_max - data.angle_min) / float(len(data.ranges))
-    points = polar_to_euclidean( [ data.angle_min + (i * step)  for i in range(len(data.ranges))], data.ranges)
+    points = polar_to_euclidean( [ data.angle_min + (i * step)  for i in range(len(data.ranges)) if data.ranges[i] < 7 ], [d for d in data.ranges if d < 7])
 
 
     t = transformer.getLatestCommonTime("laser_frame", "/map")
@@ -321,8 +340,6 @@ def handle_scan_input(data):
 
     location = ( pos[0], pos[1] )
     # print("Location: " + str(location))
-    closeEnough = lambda p: distance(p, location) < 7
-    points = filter( closeEnough, points )
 
     #emitPointCloud(map( lambda x: ( x[0]*map_resolution, x[1]*map_resolution ), list(world_map)))
     clusters = cluster_points(points, .5)
@@ -331,12 +348,13 @@ def handle_scan_input(data):
     if len(obsticles) > 0:
           emitPointCloud(map( lambda x: (x.state[0], x.state[1]), obsticles))
           pubPath( obsticles )
+          print("obst count = " + str(len(obsticles)))
     obsts_living = np.zeros( len(obsticles) )
     for c, r  in found_obsticles:
         closest = None
         minDist = None
         for i in range(len(obsticles)):
-            if (minDist == None and obsticles[i].dist(c[0], c[1], time) < ( .5 )) or obsticles[i].dist( c[0], c[1], time) < minDist:
+            if (minDist == None and obsticles[i].dist(c[0], c[1], time) < ( 0.90 )) or ( minDist != None and obsticles[i].dist( c[0], c[1], time) < minDist):
                 minDist = obsticles[i].dist( c[0], c[1], time)
                 closest = i
             # else:
