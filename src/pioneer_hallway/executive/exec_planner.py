@@ -103,7 +103,6 @@ def obstacles(dt, steps):
     try:
         get_obstacles_request = rospy.ServiceProxy('get_obstacles', GetObstacles)
         response = get_obstacles_request(dt, steps)
-        print(str(response))
         return response
     except rospy.ServiceException, e:
         rospy.logerr("Service call has failed %s"%e)
@@ -141,7 +140,6 @@ def update_cur(action, plan):
     #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
     #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
     projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
-    print(projected_pose)
     
 
 def print_projected_pose(delimiter):
@@ -186,7 +184,6 @@ def send_msg_to_planner(p, nbsr, t_time):
       else:
         msg = msg + str(t_time)
         msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
-      print(ObstacleDb.result.obstacles)
       for obst in ObstacleDb.result.obstacles:
         for prediction in obst.predictions:
           msg = msg + str(prediction.time) + ' ' + str(prediction.x) + ' ' + str(prediction.y) + ' ' + str(prediction.r) + ' ' + str(prediction.cov) + '\n'
@@ -278,7 +275,7 @@ if __name__ == '__main__':
     # the master clock for the planner
     cur_map_goal = (0, 0)
     sim_map_goal = (3.89, -0.5)
-    kings_map_goal = (6, 3)
+    kings_map_goal = (-64.5, -39.8)
 
     if simulation_flag == "-simulator":
       cur_map_goal = sim_map_goal
