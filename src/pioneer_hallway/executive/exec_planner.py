@@ -120,7 +120,7 @@ def update_cur(action, plan):
     cur_primitive = primitives[planner_action]
     rospy.logdebug(str(cur_primitive.wa) + " " + str(cur_primitive.name) + " " + str(planner_action))
     rospy.logdebug(str(predicted_pose[0]) + " " + str(predicted_pose[1]) + " " + str(vel) + " " + str(predicted_pose[2]))
-    #project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
+    project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
     next_state = plan[1].split(' ', 4)
      
     p_pose = action[1].split(' ', 4)
@@ -138,8 +138,8 @@ def update_cur(action, plan):
 
     global projected_pose
     #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
-    #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
-    projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
+    projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+    #projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
     
 
 def print_projected_pose(delimiter):
