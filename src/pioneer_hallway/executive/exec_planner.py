@@ -103,7 +103,6 @@ def obstacles(dt, steps):
     try:
         get_obstacles_request = rospy.ServiceProxy('get_obstacles', GetObstacles)
         response = get_obstacles_request(dt, steps)
-        print(str(response))
         return response
     except rospy.ServiceException, e:
         rospy.logerr("Service call has failed %s"%e)
@@ -121,7 +120,7 @@ def update_cur(action, plan):
     cur_primitive = primitives[planner_action]
     rospy.logdebug(str(cur_primitive.wa) + " " + str(cur_primitive.name) + " " + str(planner_action))
     rospy.logdebug(str(predicted_pose[0]) + " " + str(predicted_pose[1]) + " " + str(vel) + " " + str(predicted_pose[2]))
-    #project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
+    project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
     next_state = plan[1].split(' ', 4)
      
     p_pose = action[1].split(' ', 4)
@@ -136,17 +135,18 @@ def update_cur(action, plan):
     plan_pose.orientation.w = quaternion[3]
     plannerPoses.poses.append(plan_pose)
     plannerPosesPub.publish(plannerPoses)
-
     global projected_pose
     #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
-    #projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
-    projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
-    print(projected_pose)
-    
+    projected_pose= (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+    #projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
 
 def print_projected_pose(delimiter):
   return str(projected_pose[0]) + delimiter + str(projected_pose[1]) + delimiter \
      + str(projected_pose[2]) + delimiter + str(projected_pose[3])
+    
+def print_predicted_pose(delimiter):
+  return str(predicted_pose[0]) + delimiter + str(predicted_pose[1]) + delimiter \
+    + str(vel) + delimiter + str(predicted_pose[2])
 
 
 def set_new_goal(p, nbsr, x, y):
@@ -188,7 +188,7 @@ def send_msg_to_planner(p, nbsr, t_time):
         msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
       for obst in ObstacleDb.result.obstacles:
         for prediction in obst.predictions:
-          msg = msg + str(obst.time) + ' ' + str(obst.x) + ' ' + str(obst.y) + ' ' + str(obst.r) + ' ' + str(obst.cov) + '\n'
+          msg = msg + str(prediction.time) + ' ' + str(prediction.x) + ' ' + str(prediction.y) + ' ' + str(prediction.r) + ' ' + str(prediction.cov) + '\n'
       msg = msg + "\nEND\n"
 #      rospy.loginfo("sending new state to plan to: " + msg)
       p.stdin.write(str.encode(msg))
@@ -213,8 +213,8 @@ def check_planner_for_msg(p, nbsr):
         while out != "END":
           (out, t) = nbsr.readline(0.1)
           projection.append(out)
-        rospy.logdebug("plan: " + str(plan) + "\n") 
-        rospy.logdebug("projection: " + str(projection) + "\n")
+#        rospy.loginfo("plan: " + str(plan) + "\n") 
+#        rospy.loginfo("projection: " + str(projection) + "\n")
         if out == None:
           rospy.logfatal("PLANNER DID NOT RETURN WITHIN THE TIMEBOUND, SHUTTING DOWN")
           exit()
@@ -232,21 +232,21 @@ def check_planner_for_msg(p, nbsr):
         return (None,t_time, projection, plan)
 
 
-def publish_path(projection, plan):
+def publish_plan(plan,projection):
   plannerPath = Path()
   plannerPath2 = Path()
   plannerPath.header.frame_id = "map"
   plannerPath2.header.frame_id = "map"
-  
-  step = plan[0]
+
   for step in projection:
-    if step.split(' ',1)[0] != "END":
+    if step.split(' ', 1)[0] != "END":
       pose = PoseStamped()
-      pose.pose.position.x = float(step.split(' ',5)[1])
-      pose.pose.position.y = float(step.split(' ',5)[2])
+      pose.pose.position.x = float(step.split(' ', 5)[1])
+      pose.pose.position.y = float(step.split(' ', 5)[2])
       plannerPath.poses.append(pose)
       plannerPath.header.stamp = rospy.Time.now()
   plannerPathPub.publish(plannerPath)
+ 
   for step in plan:
     if step.split(' ', 1)[0] != "END":
       pose = PoseStamped()
@@ -254,7 +254,7 @@ def publish_path(projection, plan):
       pose.pose.position.y = float(step.split(' ', 5)[2])
       plannerPath2.poses.append(pose)
       plannerPath2.header.stamp = rospy.Time.now()
-  plannerPathPub2.publish(plannerPath)
+  plannerPathPub2.publish(plannerPath2)
   
 
 if __name__ == '__main__':
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     # the master clock for the planner
     cur_map_goal = (0, 0)
     sim_map_goal = (3.89, -0.5)
-    kings_map_goal = (-64.5, -39.8)
+    kings_map_goal = (6.9, 7.13)
 
     if simulation_flag == "-simulator":
       cur_map_goal = sim_map_goal
@@ -290,7 +290,7 @@ if __name__ == '__main__':
     projected_pose = (predicted_pose[0], predicted_pose[1], vel, predicted_pose[2])
     rospy.loginfo("Executive online...")
     try:
-        while (0.25 >= (time.time() - cur_clock)):
+        while (0.26 >= (time.time() - cur_clock)):
             cur_clock = time.time() 
             if first_iteration:
               t_time = t_time + 250
@@ -305,7 +305,7 @@ if __name__ == '__main__':
             cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + "\n"
             rospy.logdebug("msg_to_controller: " + cont_msg)
             exec_control_pub(cont_msg)
-            publish_path(projection, plan)
+            publish_plan(plan,projection)
 #            rospy.loginfo(str(time.time() - cur_clock))
             #t_time = t_time - 5 
             first_iteration = False
