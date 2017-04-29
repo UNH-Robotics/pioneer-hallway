@@ -224,7 +224,7 @@ def check_planner_for_msg(p, nbsr):
           if plan[0].split(' ',1)[0] == "END":
             rospy.logfatal("PLANNER DID NOT RETURN A PLAN, SHUTTING DOWN")
             exit()
-          return (plan[0].split(' ',1),t_time, projection, plan)
+          return (plan[1].split(' ',1),t_time, projection, plan)
     except Exception, e:
         rospy.logfatal("EXECUTIVE OR ROSMASTER HAS FAILED, SHUTTING DOWN")
         rospy.logerr("%s"%e)
@@ -276,7 +276,7 @@ if __name__ == '__main__':
     # give time for the planner to initialize
     # the master clock for the planner
     cur_map_goal = (0, 0)
-    sim_map_goal = (3.89, -0.5)
+    sim_map_goal = (1.4, -0.3)
     kings_map_goal = (6.9, 7.13)
 
     if simulation_flag == "-simulator":
