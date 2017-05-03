@@ -253,18 +253,19 @@ if __name__ == '__main__':
         
         x = 0
         x0 = predicted_pose[0]
-        y = str(predicted_pose[1])
+        y=100
+        y0 = predicted_pose[1]
         t = 0.25
-        a = 0.15
+        a = 0.3
         i = 1
         v = 0
-        while (x < -33):
+        while (y > -12):
            # rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
             # send the msg to the planner store the time it took
             #cur_clock, action = send_msg_to_planner(master_clock, planner, nbsr)
-            x = x0 + 0.5 * a * math.pow(i * t, 2)
+            y = y0 - 0.5 * a * math.pow(i * t, 2)
             v = a * i * t
-            action = "a22," + str(x) + "," +y+ " ," + str(v) + ",0,12312"
+            action = "a12," + str(x0) + "," +str(y)+ " ," + str(v) + ",-1.57,12312"
             exec_control_pub(action)
             #update_cur(action)
             i += 1;
