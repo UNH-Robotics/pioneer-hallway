@@ -22,8 +22,8 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("-s", "--simulation", help="run with the simulation map", action="store_true")
 
-parser.add_argument("-x", help="the x location of the goal on the map")
-parser.add_argument("-y", help="the y location of the goal on the map")
+parser.add_argument("-x", "--goalX", help="the x location of the goal on the map")
+parser.add_argument("-y", "--goalY", help="the y location of the goal on the map")
 parser.add_argument("-o","--obstacles", help="send dynamic obstacle msg to planner", action="store_true")
 parser.add_argument("-p", "--projection", help="use projections", action="store_true")
 
@@ -327,6 +327,8 @@ if __name__ == '__main__':
       cur_map_goal = sim_map_goal
     else:
       cur_map_goal = kings_map_goal
+    if args.goalX != None and args.goalY != None:
+      cur_map_goal = (float(args.goalX), float(args.goalY))
     
     set_new_goal(planner, nbsr, cur_map_goal[0], cur_map_goal[1]) 
     cur_clock = time.time()
