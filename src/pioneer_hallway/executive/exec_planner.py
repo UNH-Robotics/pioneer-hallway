@@ -133,7 +133,7 @@ def obstacles(dt, steps):
 def exec_control_pub(action):
     pub.publish(action)
 
-def update_cur(action, plan):
+def update_cur(action, projection):
     log_file.write("update_cur action: " + str(action) + "\n")
     planner_action = action[0]
     state = (str(predicted_pose[0]), str(predicted_pose[1]), str(vel), str(predicted_pose[2]))
@@ -147,27 +147,15 @@ def update_cur(action, plan):
     rospy.logdebug(str(cur_primitive.wa) + " " + str(cur_primitive.name) + " " + str(planner_action))
     rospy.logdebug(str(predicted_pose[0]) + " " + str(predicted_pose[1]) + " " + str(vel) + " " + str(predicted_pose[2]))
     project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
-    next_state = plan[1].split(' ', 4)
-     
-    p_pose = action[1].split(' ', 4)
-
-    plan_pose = Pose()
-    plan_pose.position.x = float(p_pose[0])
-    plan_pose.position.y = float(p_pose[1])
-    quaternion = tf.transformations.quaternion_from_euler(0, 0, float(p_pose[3]))
-    plan_pose.orientation.x = quaternion[0]
-    plan_pose.orientation.y = quaternion[1]
-    plan_pose.orientation.z = quaternion[2]
-    plan_pose.orientation.w = quaternion[3]
-    plannerPoses.poses.append(plan_pose)
-    plannerPosesPub.publish(plannerPoses)
+    next_state = projection[1].split(' ', 4)
+    p_pose = projection[1].split(' ', 5)
   
     global projected_pose
     #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
     if args.projection:
       projected_pose = (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
     else:
-      projected_pose = (float(p_pose[0]), float(p_pose[1]), float(p_pose[2]), float(p_pose[3]))
+      projected_pose = (float(p_pose[1]), float(p_pose[2]), float(p_pose[3]), float(p_pose[4]))
 
 def print_projected_pose(delimiter):
   return str(projected_pose[0]) + delimiter + str(projected_pose[1]) + delimiter \
@@ -211,10 +199,10 @@ def send_msg_to_planner(p, nbsr, t_time):
       if not first_iteration:
         t_time = t_time + 245
         msg = msg + str(t_time)
-        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time-245)
+        msg = msg + ' ' + print_predicted_pose(" ") + ' ' + str(t_time-245)
       else:
         msg = msg + str(t_time)
-        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
+        msg = msg + ' ' + print_predicted_pose(" ") + ' ' + str(t_time)
       if args.obstacles:
         for obst in ObstacleDb.result.obstacles:
           for prediction in obst.predictions:
@@ -345,7 +333,7 @@ if __name__ == '__main__':
             time.sleep(0.240)
             #check for the action to be in the queue
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
-            update_cur(action, plan)
+            update_cur(action, projection)
 #            rospy.loginfo("planner_time: " + str(planner_start_time - end_time))
             log_file.write("action_from_planner: " + action[0] + "\n")
             cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + "\n"
