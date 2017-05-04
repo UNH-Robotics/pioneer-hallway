@@ -149,8 +149,8 @@ def update_cur(action, projection):
     rospy.logdebug(str(cur_primitive.wa) + " " + str(cur_primitive.name) + " " + str(planner_action))
     rospy.logdebug(str(predicted_pose[0]) + " " + str(predicted_pose[1]) + " " + str(vel) + " " + str(predicted_pose[2]))
     project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
-    next_state = projection[1].split(' ', 4)
-    p_pose = projection[1].split(' ', 5)
+    next_state = projection[0].split(' ', 4)
+    p_pose = projection[0].split(' ', 5)
   
     global projected_pose
     #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
@@ -264,7 +264,7 @@ def check_planner_for_msg(p, nbsr):
             log_file.write(data_log)
             log_file.close()
             exit()
-          return (plan[1].split(' ',1),t_time, projection, plan)
+          return (plan[0].split(' ',1),t_time, projection, plan)
     except Exception, e:
         rospy.logfatal("EXECUTIVE OR ROSMASTER HAS FAILED, SHUTTING DOWN")
         rospy.logfatal("DID YOU SET UP THE ARGUMENTS???")
