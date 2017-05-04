@@ -1,4 +1,6 @@
 <launch> 
+	<param name="maxDeltaPose" value="0.00001" />
+	<param name="maxDeltaAngle" value="0.00001" />
 	<param name="primitive_file" value="doc/motionPrimitive/primitives.txt" />
 	
 	<!-- rosaria node -->

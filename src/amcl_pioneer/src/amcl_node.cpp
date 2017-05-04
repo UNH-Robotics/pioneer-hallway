@@ -510,11 +510,13 @@ double AmclNode::calculateDeltaAngle()
 
 void AmclNode::evaluateSensorData()
 {
-	double d = calculateDeltaDistance();
-	double a = calculateDeltaAngle();
-	//ROS_INFO("%f   %f", d, max_delta_pose);
-	if ((d > max_delta_pose || a > max_delta_angle) && last_laser != NULL)
+	//double d = calculateDeltaDistance();
+	//double a = calculateDeltaAngle();
+	//ROS_INFO("%f   %f   %f", d, a, max_delta_pose);
+	//if ((d > max_delta_pose || a > max_delta_angle) && last_laser != NULL)
+	if (last_laser != NULL)
 	{
+		//ROS_INFO("test");
 		last_published_position.x = last_received_position.x;
 		last_published_position.y = last_received_position.y;
 		last_published_position.z = last_received_position.z;
