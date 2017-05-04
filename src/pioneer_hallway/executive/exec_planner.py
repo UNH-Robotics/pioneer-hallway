@@ -229,15 +229,15 @@ def check_planner_for_msg(p, nbsr):
         t_time = int(out.split(' ', 1)[1])
         rospy.logdebug("time_stamp_from_planner: " + str(t_time))
         rospy.logdebug(out) 
-        #data_log += out + "\n"
+        data_log += out + "\n"
         #log_file.write(out + "\n")
         while out != "END":
           (out, t) = nbsr.readline(0.01)
           plan.append(out)  
         (out, t) = nbsr.readline(0.01)
         rospy.logdebug(out)
-        #data_log += str(plan) + "\n"
-        #data_log += out + "\n"
+        data_log += str(plan) + "\n"
+        data_log += out + "\n"
         #log_file.write(str(plan) + "\n")
         #log_file.write(out + "\n")
         while out != "END":
@@ -245,7 +245,7 @@ def check_planner_for_msg(p, nbsr):
           projection.append(out)
 #        rospy.loginfo("plan: " + str(plan) + "\n") 
 #        rospy.loginfo("projection: " + str(projection) + "\n")
-       # data_log += str(projection) + "\n"
+        data_log += str(projection) + "\n"
         #log_file.write(str(projection) + "\n")
         if out == None:
           rospy.logfatal("PLANNER DID NOT RETURN WITHIN THE TIMEBOUND, SHUTTING DOWN")
@@ -336,7 +336,7 @@ if __name__ == '__main__':
     projected_pose = (predicted_pose[0], predicted_pose[1], vel, predicted_pose[2])
     rospy.loginfo("Executive online...")
     try:
-        while (0.26 >= (time.time() - cur_clock)):
+        while (1.26 >= (time.time() - cur_clock)):
             ObstacleDb = obstacles(0.1, 1)
             cur_clock = time.time() 
             if first_iteration:
