@@ -27,9 +27,9 @@ frame = 'map'
 
 #values in meters
 robotLength = 0.511 #value grabbed from /usr/local/Aria/params/p3dx.p
-robotWidth = 0.425 #value grabbed from /usr/local/Aria/params/p3dx.p
-robotLCushion = 0.16
-robotWCushion = 0.12
+robotWidth = 0.381 #value grabbed from /usr/local/Aria/params/p3dx.p
+robotLCushion = 0.08
+robotWCushion = 0.08
 robotLengthFromCenter = (robotLength + robotLCushion) / 2
 robotWidthFromCenter = (robotWidth + robotWCushion) / 2
 sonarOffset = -0.198 #value grabbed from pioneer3dx.xacro
@@ -37,21 +37,6 @@ laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
 
 #value in m/s**2
 maxDecel = 0.6
-
-#calculates the distance between a point and a line
-#lineEnd and lineStart define the end and start points of the line
-#point is the point we want to calculate the distance to
-def calculateDistance(lineEnd, lineStart, point):
-	distance = (abs((lineEnd.y - lineStart.y) * point.x - 
-	   (lineEnd.x - lineStart.x) * point.y + 
-	   lineEnd.x * lineStart.y - lineEnd.y * lineStart.x) / 
-	   pow(pow(lineEnd.y - lineStart.y,2) + 
-	   pow(lineEnd.x - lineStart.x,2), 1/2))
-	return distance
-
-#calculates the distance between two points
-def calculateEuclideanDistance(p1, p2):
-	return sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
 
 def polar_to_euclidean( angles, ranges ):
     return [ [ np.cos(theta)*r, np.sin(theta)*r ] for 
@@ -78,9 +63,9 @@ def amclPoseCallback(pose):
 	global amclPose
 	amclPose = pose
 
+#calculates de position of the robot at a given time based on the current speed
 def calculatePolygons(deltaT):
-	#rospy.loginfo("%f", deltaT)
-	#get current pose
+	#get current pose and speed
 	currPose = amclPose.pose.pose
 	currTwist = rosAriaPose.twist.twist
 	
@@ -97,12 +82,6 @@ def calculatePolygons(deltaT):
 	rotatePose(robotFrameB, currPose.orientation)
 	rotatePose(robotFrameC, currPose.orientation)
 	rotatePose(robotFrameD, currPose.orientation)
-	
-	#calculate current vertices
-	#cp0 = Point32(currPose.position.x + robotFrameA.x, currPose.position.y + robotFrameA.y, 0)
-	#cp1 = Point32(currPose.position.x + robotFrameB.x, currPose.position.y + robotFrameB.y, 0)
-	#cp2 = Point32(currPose.position.x + robotFrameC.x, currPose.position.y + robotFrameC.y, 0)
-	#cp3 = Point32(currPose.position.x + robotFrameD.x, currPose.position.y + robotFrameD.y, 0)
 	
 	#predict vertices
 	#calculates linear movement
@@ -125,14 +104,7 @@ def calculatePolygons(deltaT):
 	pp3 = Point32(currPose.position.x + robotFrameD.x + delta.x, 
 	       currPose.position.y + robotFrameD.y + delta.y, 0)
 	
-	#create final polygons
-	#polyCurr.polygon.points = [None] * 4
-	#polyCurr.polygon.points[0] = cp0
-	#polyCurr.polygon.points[1] = cp1
-	#polyCurr.polygon.points[2] = cp3
-	#polyCurr.polygon.points[3] = cp2
-	#polyCurr.header.frame_id = frame
-	
+	#creates polygon
 	polyPred.polygon.points = [None] * 4
 	polyPred.polygon.points[0] = pp0
 	polyPred.polygon.points[1] = pp1
@@ -231,12 +203,15 @@ def sonarLaserCallback(data):
 			evaluateReadings(pc)
 		#testCloudPub.publish(pc)
 
+#evaluates a give point cloud to check for collisions
 def evaluateReadings(pc):
 	#calculate deltaT
 	global collision
 	currSpeed = rosAriaPose.twist.twist
+	
+	#check for collisions only if the robot is moving
 	if currSpeed.linear.x <= -0.02 or currSpeed.linear.x >= 0.02:
-		deltaT = max(abs((currSpeed.linear.x) / maxDecel), 0.5)
+		deltaT = abs((currSpeed.linear.x) / maxDecel)
 		timeIncrement = deltaT / 4
 		currTime = timeIncrement
 		while currTime <= deltaT and not collision:
