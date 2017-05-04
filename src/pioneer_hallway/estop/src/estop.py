@@ -20,7 +20,7 @@ collisionFramePub = None
 predictedFramePub = None
 cmdVelPub = None
 collision = False
-#testCloudPub = None
+testCloudPub = None
 
 #used in rotations
 frame = 'map'
@@ -36,7 +36,8 @@ sonarOffset = -0.198 #value grabbed from pioneer3dx.xacro
 laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
 
 #value in m/s**2
-maxDecel = 0.6
+maxDecelF = 0.88
+maxDecelB = 0.6
 
 def polar_to_euclidean( angles, ranges ):
     return [ [ np.cos(theta)*r, np.sin(theta)*r ] for 
@@ -76,8 +77,8 @@ def calculatePolygons(deltaT):
 	#rotate robot frame
 	robotFrameA = Point32(robotLengthFromCenter, robotWidthFromCenter, 0)
 	robotFrameB = Point32(robotLengthFromCenter, -robotWidthFromCenter, 0)
-	robotFrameC = Point32(-robotLengthFromCenter, robotWidthFromCenter, 0)
-	robotFrameD = Point32(-robotLengthFromCenter, -robotWidthFromCenter, 0)
+	robotFrameC = Point32(-robotLengthFromCenter - 0.13, robotWidthFromCenter, 0)
+	robotFrameD = Point32(-robotLengthFromCenter - 0.13, -robotWidthFromCenter, 0)
 	rotatePose(robotFrameA, currPose.orientation)
 	rotatePose(robotFrameB, currPose.orientation)
 	rotatePose(robotFrameC, currPose.orientation)
@@ -132,7 +133,7 @@ def triggerEstop(polygon):
 def sonarCallback(data):
 	global collision
 	currSpeed = rosAriaPose.twist.twist
-	if not collision and (currSpeed.linear.x >= abs(0.02)):
+	if not collision and (abs(currSpeed.linear.x) >= 0.02):
 		pose = amclPose.pose.pose
 		pc = PointCloud()
 		pc.header.frame_id = "map"
@@ -143,7 +144,7 @@ def sonarCallback(data):
 			q = Quaternion(tfq[0], tfq[1], tfq[2], tfq[3])
 			p = Point32(point.x, point.y, 0)
 			rotatePose(p, q)
-			#p.x = p.x
+			#p.x = sonarOffset + p.x
 			rotatePose(p, pose.orientation)
 			p.x = pose.position.x + p.x
 			p.y = pose.position.y + p.y
@@ -157,7 +158,7 @@ def sonarCallback(data):
 def laserCallback(data):
 	global collision
 	currSpeed = rosAriaPose.twist.twist
-	if not collision and (currSpeed.linear.x >= abs(0.02)):
+	if not collision and (abs(currSpeed.linear.x) >= 0.02):
 		pose = amclPose.pose.pose
 		points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  
 							for i in range(len(data.ranges))], data.ranges)
@@ -180,7 +181,7 @@ def laserCallback(data):
 def sonarLaserCallback(data):
 	global collision
 	currSpeed = rosAriaPose.twist.twist
-	if not collision and (currSpeed.linear.x >= abs(0.02)):
+	if not collision and (abs(currSpeed.linear.x) >= 0.02):
 		pose = amclPose.pose.pose
 		points = polar_to_euclidean( [ data.angle_min + (i * data.angle_increment)  
 							for i in range(len(data.ranges))], data.ranges)
@@ -211,6 +212,10 @@ def evaluateReadings(pc):
 	
 	#check for collisions only if the robot is moving
 	if currSpeed.linear.x <= -0.02 or currSpeed.linear.x >= 0.02:
+		if (currSpeed.linear.x > 0):
+			maxDecel = maxDecelF
+		else:
+			maxDecel = maxDecelB
 		deltaT = abs((currSpeed.linear.x) / maxDecel)
 		timeIncrement = deltaT / 4
 		currTime = timeIncrement
@@ -236,7 +241,7 @@ def estop():
 	global predictedFramePub
 	global collisionFramePub
 	global cmdVelPub	
-	#global testCloudPub
+	global testCloudPub
 	
 	#initialize node
 	rospy.init_node('pioneer_estop', anonymous=False)
@@ -244,7 +249,7 @@ def estop():
 	#initialize frame publishers
 	collisionFramePub = rospy.Publisher('estop_collision_frame', PolygonStamped, queue_size=1)
 	predictedFramePub = rospy.Publisher('estop_predicted_frame', PolygonStamped, queue_size=1)
-	#testCloudPub = rospy.Publisher('testCloud', PointCloud, queue_size=1)
+	testCloudPub = rospy.Publisher('testCloud', PointCloud, queue_size=1)
 	
 	#load configuration parameters
 	laserTopic = rospy.get_param("laserTopic", "RosAria/lms5XX_1_laserscan")
@@ -260,7 +265,7 @@ def estop():
 	if sim == True:
 		rospy.Subscriber('sonar_b', LaserScan, sonarLaserCallback)
 	else:
-		rospy.Subscriber('RosAria/sonar', PointCloud, sonarCallback)
+		rospy.Subscriber('RosAria/sonar', PointCloud, sonarCallback, queue_size=1)
 		
 	#initialize connection to disable_cmd_vel_publisher service
 	disablePublisher = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
