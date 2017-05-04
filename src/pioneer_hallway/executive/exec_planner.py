@@ -202,16 +202,10 @@ def send_msg_to_planner(p, nbsr, t_time):
       if not first_iteration:
         t_time = t_time + 245
         msg = msg + str(t_time)
-        if args.projection:
-          msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time-245)
-        else:
-          msg = msg + ' ' + print_predicted_pose(" ") + ' ' + str(t_time-245)
+        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time-245)
       else:
         msg = msg + str(t_time)
-        if args.projection: 
-          msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
-        else:
-          msg = msg + ' ' + print_predicted_pose(" ") + ' ' + str(t_time)
+        msg = msg + ' ' + print_projected_pose(" ") + ' ' + str(t_time)
       if args.obstacles:
         for obst in ObstacleDb.result.obstacles:
           for prediction in obst.predictions:
