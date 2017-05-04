@@ -33,7 +33,8 @@ def timeStamped(fname, fmt='%Y-%m-%d-%H-%M-%S_{fname}'):
   return datetime.datetime.now().strftime(fmt).format(fname=fname)
 
 log_file = open('exec.log', 'w')
-log_file.write(str(timeStamped('exec.log') + "\n"))
+#log_file.write(str(timeStamped('exec.log') + "\n"))
+data_log = str(timeStamped('exec.log') + "\n")
 
 '''
  used to keep track of current state
@@ -134,13 +135,14 @@ def exec_control_pub(action):
     pub.publish(action)
 
 def update_cur(action, projection):
-    log_file.write("update_cur action: " + str(action) + "\n")
+    #log_file.write("update_cur action: " + str(action) + "\n")
     planner_action = action[0]
     state = (str(predicted_pose[0]), str(predicted_pose[1]), str(vel), str(predicted_pose[2]))
     if planner_action == "":
       rospy.logfatal("NO ACTION RETURNED BY THE PLANNER, SHUTTING DOWN")
       rospy.logfatal("DID YOU SET UP THE ARGUMENTS???")
       rospy.logerr(parser.print_help())
+      log_file.write(data_log)
       log_file.close()
       exit()
     cur_primitive = primitives[planner_action]
@@ -194,6 +196,7 @@ def send_goal_to_planner(p, nbsr, x, y):
     return None
 
 def send_msg_to_planner(p, nbsr, t_time):
+    global data_log
     if planner_finished:
       msg = "STATE\n" 
       if not first_iteration:
@@ -208,13 +211,15 @@ def send_msg_to_planner(p, nbsr, t_time):
           for prediction in obst.predictions:
             msg = msg + str(prediction.time) + ' ' + str(prediction.x) + ' ' + str(prediction.y) + ' ' + str(prediction.r) + ' ' + str(prediction.cov) + '\n'
       msg = msg + "\nEND\n"
-      log_file.write("sending new state to plan to: " + str(msg))
+      data_log += "sending new state to plan to " + str(msg)
+#      log_file.write("sending new state to plan to: " + str(msg))
 #      rospy.loginfo("sending new state to plan to: " + msg)
       p.stdin.write(str.encode(msg))
       p.stdin.flush()
     return True
 
 def check_planner_for_msg(p, nbsr):
+    global data_log
     try:
         plan = []
         projection = []
@@ -223,25 +228,30 @@ def check_planner_for_msg(p, nbsr):
         end_time = t
         t_time = int(out.split(' ', 1)[1])
         rospy.logdebug("time_stamp_from_planner: " + str(t_time))
-        rospy.logdebug(out)
-        log_file.write(out + "\n")
+        rospy.logdebug(out) 
+        #data_log += out + "\n"
+        #log_file.write(out + "\n")
         while out != "END":
           (out, t) = nbsr.readline(0.01)
           plan.append(out)  
         (out, t) = nbsr.readline(0.01)
         rospy.logdebug(out)
-        log_file.write(str(plan) + "\n")
-        log_file.write(out + "\n")
+        #data_log += str(plan) + "\n"
+        #data_log += out + "\n"
+        #log_file.write(str(plan) + "\n")
+        #log_file.write(out + "\n")
         while out != "END":
           (out, t) = nbsr.readline(0.1)
           projection.append(out)
 #        rospy.loginfo("plan: " + str(plan) + "\n") 
 #        rospy.loginfo("projection: " + str(projection) + "\n")
-        log_file.write(str(projection) + "\n")
+       # data_log += str(projection) + "\n"
+        #log_file.write(str(projection) + "\n")
         if out == None:
           rospy.logfatal("PLANNER DID NOT RETURN WITHIN THE TIMEBOUND, SHUTTING DOWN")
           rospy.logfatal("DID YOU SET UP THE ARGUMENTS???")
           rospy.logerr(parser.print_help())
+          log_file.write(data_log)
           log_file.close()
           exit()
           return (None,t_time, projection, plan)
@@ -251,6 +261,7 @@ def check_planner_for_msg(p, nbsr):
             rospy.logfatal("PLANNER DID NOT RETURN A PLAN, SHUTTING DOWN")
             rospy.logfatal("DID YOU SET UP THE ARGUMENTS???")
             rospy.logerr(parser.print_help())
+            log_file.write(data_log)
             log_file.close()
             exit()
           return (plan[1].split(' ',1),t_time, projection, plan)
@@ -259,6 +270,7 @@ def check_planner_for_msg(p, nbsr):
         rospy.logfatal("DID YOU SET UP THE ARGUMENTS???")
         rospy.logerr(parser.print_help())
         rospy.logerr("%s"%e)
+        log_file.write(data_log)
         log_file.close()
         exit()
         return (None,t_time, projection, plan)
@@ -325,6 +337,7 @@ if __name__ == '__main__':
     rospy.loginfo("Executive online...")
     try:
         while (0.26 >= (time.time() - cur_clock)):
+            ObstacleDb = obstacles(0.1, 1)
             cur_clock = time.time() 
             if first_iteration:
               t_time = t_time + 250
@@ -335,9 +348,11 @@ if __name__ == '__main__':
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
             update_cur(action, projection)
 #            rospy.loginfo("planner_time: " + str(planner_start_time - end_time))
-            log_file.write("action_from_planner: " + action[0] + "\n")
+            data_log += "action_from_planner: " + action[0] + "\n"
+#            log_file.write("action_from_planner: " + action[0] + "\n")
             cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + "\n"
-            log_file.write("msg_to_controller: " + cont_msg + "\n")
+            data_log += "msg_to_controller: " + cont_msg + "\n"
+#            log_file.write("msg_to_controller: " + cont_msg + "\n")
             exec_control_pub(cont_msg)
             publish_plan(plan,projection)
 #            rospy.loginfo(str(time.time() - cur_clock))
@@ -346,6 +361,7 @@ if __name__ == '__main__':
         raise rospy.ROSException("ESTOP")
     except (rospy.ROSInterruptException, rospy.ROSException):
       rospy.logerr("ESTOP - iteration took too long: " + str(time.time() - cur_clock))
+      log_file.write(data_log)
       log_file.close()
 
 
