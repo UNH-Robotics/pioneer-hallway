@@ -28,7 +28,7 @@ frame = 'map'
 #values in meters
 robotLength = 0.511 #value grabbed from /usr/local/Aria/params/p3dx.p
 robotWidth = 0.381 #value grabbed from /usr/local/Aria/params/p3dx.p
-robotLCushion = 0.08
+robotLCushion = 0.06
 robotWCushion = 0.08
 robotLengthFromCenter = (robotLength + robotLCushion) / 2
 robotWidthFromCenter = (robotWidth + robotWCushion) / 2
@@ -36,8 +36,8 @@ sonarOffset = -0.198 #value grabbed from pioneer3dx.xacro
 laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
 
 #value in m/s**2
-maxDecelF = 0.88
-maxDecelB = 0.6
+maxDecelF = 0.9
+maxDecelB = 0.8
 
 def polar_to_euclidean( angles, ranges ):
     return [ [ np.cos(theta)*r, np.sin(theta)*r ] for 
@@ -77,8 +77,8 @@ def calculatePolygons(deltaT):
 	#rotate robot frame
 	robotFrameA = Point32(robotLengthFromCenter, robotWidthFromCenter, 0)
 	robotFrameB = Point32(robotLengthFromCenter, -robotWidthFromCenter, 0)
-	robotFrameC = Point32(-robotLengthFromCenter - 0.13, robotWidthFromCenter, 0)
-	robotFrameD = Point32(-robotLengthFromCenter - 0.13, -robotWidthFromCenter, 0)
+	robotFrameC = Point32(-robotLengthFromCenter - 0.15, robotWidthFromCenter, 0)
+	robotFrameD = Point32(-robotLengthFromCenter - 0.15, -robotWidthFromCenter, 0)
 	rotatePose(robotFrameA, currPose.orientation)
 	rotatePose(robotFrameB, currPose.orientation)
 	rotatePose(robotFrameC, currPose.orientation)

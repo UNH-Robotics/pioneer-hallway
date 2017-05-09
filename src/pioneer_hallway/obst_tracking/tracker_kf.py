@@ -70,7 +70,7 @@ class Obsticle:
     def update(self, state, time, radius):
         self.health = 5
         self.lifetime += 1.0
-        self.Q = np.eye(4) / (self.lifetime * 1.4 )
+        self.Q = np.eye(4) / (self.lifetime * 1.1 )
         self.radius = max( self.radius, radius )
         dt = time - self.lasttime
 
