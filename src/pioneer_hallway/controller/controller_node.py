@@ -96,7 +96,7 @@ def executive_callback(data):
 
 def executive_listener():
     rospy.Subscriber('controller_msg', String, executive_callback)
-    rospy.spin()
+    #rospy.spin()
 
 def rosaria_twist_callback(data):
     global currentState
@@ -182,7 +182,7 @@ def pose_listener():
     #rospy.Subscriber('odom', Odometry, pose_callback)
     rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, amclpose_callback)
     #rospy.Subscriber('cmd_vel', Twist, twist_callback)
-    rospy.spin()
+    #rospy.spin()
 
 def sampling_based_controller(refAction, start, end, endClock):
     deltaT = endClock - time.time()
@@ -468,7 +468,7 @@ def move():
     pub = rospy.Publisher('cmd_vel_request', Twist, queue_size=10)
     #pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     # The local controller run at 60hz
-    rate = rospy.Rate(50)
+    rate = rospy.Rate(60)
     i = 1
     motion = None
     while receivedAction != 'NotReceived' and receivedGoalState != None:
@@ -519,6 +519,7 @@ def move():
             else:
                 pub.publish(motion)
                 pubrate.sleep()
+                rate.sleep()
             rate.sleep()
     rospy.logerr("Not Received Action!")
     disable_motors = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
@@ -555,21 +556,24 @@ def wait_for_first_action():
     global receivedAction
     while receivedAction == 'NotReceived':
         rospy.loginfo("waiting for the first action from the executive")
-        rospy.sleep(rospy.Duration(0.05))  
+        rospy.sleep(rospy.Duration(0.01))  
 
 if __name__ == '__main__':
     init_motions()
     init_path_output()
     rospy.init_node('controller_node', anonymous=True)
     rospy.wait_for_service('disable_cmd_vel_publisher')
-    execListernerThread = Thread(target=executive_listener, args=())
-    poseListernerThread = Thread(target=pose_listener, args=())
-    controllerPublisherThread = Thread(target=move, args=())
+    #execListernerThread = Thread(target=executive_listener, args=())
+    #poseListernerThread = Thread(target=pose_listener, args=())
+    #controllerPublisherThread = Thread(target=move, args=())
+    executive_listener()
+    pose_listener()
 
     #poseListernerThread.setDaemon(True)
     #execListernerThread.setDaemon(True)
-    poseListernerThread.start()
-    execListernerThread.start()
+    #poseListernerThread.start()
+    #execListernerThread.start()
     wait_for_first_action()   
-    controllerPublisherThread.start()
+    #controllerPublisherThread.start()
+    move()
 
