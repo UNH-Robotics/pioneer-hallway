@@ -470,6 +470,7 @@ def move():
     # The local controller run at 60hz
     rate = rospy.Rate(50)
     i = 1
+    motion = None
     while receivedAction != 'NotReceived' and receivedGoalState != None:
         print i
         i += 1
@@ -486,6 +487,7 @@ def move():
         plannerPath.header.stamp = rospy.Time.now()
         plannerPathPub.publish(plannerPath)
         print len(plannerPath.poses)
+        pubrate = rospy.Rate(120)
         while((time.time() - beginClock) <= duration):
             if changePlan:
                 changePlan = 0
@@ -514,11 +516,14 @@ def move():
                 #               "duration: " + str(duration))
                 pub.publish(motion)
                 getNewState = 0
+            else:
+                pub.publish(motion)
+                pubrate.sleep()
             rate.sleep()
     rospy.logerr("Not Received Action!")
     disable_motors = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
     disable_motors.call()
-
+      
 def init_motions():
     global duration
     #prim_file = rospy.get_param("primitive_file")
@@ -549,7 +554,7 @@ def wait_for_first_action():
     #sleep until received the first action from the executive
     global receivedAction
     while receivedAction == 'NotReceived':
-        rospy.loginfo("wait for the first action from the executive")
+        rospy.loginfo("waiting for the first action from the executive")
         rospy.sleep(rospy.Duration(0.05))  
 
 if __name__ == '__main__':
