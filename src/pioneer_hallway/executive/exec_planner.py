@@ -151,6 +151,18 @@ def update_cur(action, projection):
     project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
     next_state = projection[0].split(' ', 4)
     p_pose = projection[0].split(' ', 5)
+    pp = action[1].split(' ', 4)
+
+    plan_pose = Pose()
+    plan_pose.position.x = float(pp[0])
+    plan_pose.position.y = float(pp[1])
+    quaternion = tf.transformations.quaternion_from_euler(0, 0, float(pp[3]))
+    plan_pose.orientation.x = quaternion[0]
+    plan_pose.orientation.y = quaternion[1]
+    plan_pose.orientation.z = quaternion[2]
+    plan_pose.orientation.w = quaternion[3]
+    plannerPoses.poses.append(plan_pose)
+    plannerPosesPub.publish(plannerPoses) 
   
     global projected_pose
     #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
@@ -343,7 +355,7 @@ if __name__ == '__main__':
               t_time = t_time + 250
             #send the msg to the planner store the time it took
             success = send_msg_to_planner(planner, nbsr, t_time)
-            time.sleep(0.240)
+            time.sleep(0.250)
             #check for the action to be in the queue
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
             update_cur(action, projection)
