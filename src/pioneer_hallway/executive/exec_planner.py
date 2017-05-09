@@ -355,7 +355,7 @@ if __name__ == '__main__':
               t_time = t_time + 250
             #send the msg to the planner store the time it took
             success = send_msg_to_planner(planner, nbsr, t_time)
-            time.sleep(0.250)
+            time.sleep(0.240)
             #check for the action to be in the queue
             (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
             update_cur(action, projection)
