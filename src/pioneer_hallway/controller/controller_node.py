@@ -468,7 +468,7 @@ def move():
     pub = rospy.Publisher('cmd_vel_request', Twist, queue_size=10)
     #pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     # The local controller run at 60hz
-    rate = rospy.Rate(60)
+    rate = rospy.Rate(200)
     i = 1
     motion = None
     while receivedAction != 'NotReceived' and receivedGoalState != None:
@@ -487,7 +487,7 @@ def move():
         plannerPath.header.stamp = rospy.Time.now()
         plannerPathPub.publish(plannerPath)
         print len(plannerPath.poses)
-        pubrate = rospy.Rate(120)
+        pubrate = rospy.Rate(200)
         while((time.time() - beginClock) <= duration):
             if changePlan:
                 changePlan = 0
@@ -516,11 +516,12 @@ def move():
                 #               "duration: " + str(duration))
                 pub.publish(motion)
                 getNewState = 0
+                pubrate.sleep()
             else:
                 pub.publish(motion)
                 pubrate.sleep()
-                rate.sleep()
-            rate.sleep()
+                #rate.sleep()
+            #rate.sleep()
     rospy.logerr("Not Received Action!")
     disable_motors = rospy.ServiceProxy('disable_cmd_vel_publisher', Empty)
     disable_motors.call()
