@@ -70,7 +70,7 @@ def move_test():
         i+=1
         rate.sleep()
     rospy.loginfo(time.time())
-    rospy.logerr("1 second!")
+    rospy.loginfo("1 second!")
 
 if __name__ == '__main__':
     rospy.init_node('move_test_node', anonymous=True)
