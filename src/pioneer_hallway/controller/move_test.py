@@ -24,6 +24,15 @@ import time
 from datetime import datetime
 from nav_msgs.msg import Path
 from sensor_msgs.msg import LaserScan
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-v", "--linear", help="linear velocity")
+parser.add_argument("-w", "--angular", help="angular velocity")
+parser.add_argument("-t", "--time", help="time duration")
+parser.add_argument("-r", "--rate", help="time duration")
+args = parser.parse_args()
 
 def amclpose_callback(data):
     quaternion = (
@@ -58,19 +67,33 @@ def move_test():
     twist = Twist()
     twist.linear.x = 3.0
     twist.angular.z = 0.3
+    time_duration=1.0
+    rateHZ=60
+
+    if args.linear != None:
+        twist.linear.x= float(args.linear)
+
+    if args.angular != None:
+        twist.angular.z= float(args.angular)
+
+    if args.time!=None:
+        time_duration= float(args.time)
+
+    if args.rate!=None:
+        rateHZ= int(args.rate)
     
     pub.publish(twist)
-    rate = rospy.Rate(60)
+    rate = rospy.Rate(rateHZ)
     beginClock = time.time()    
     rospy.loginfo(beginClock)
     i=1
-    while((time.time() - beginClock) <= 1.0):
+    while((time.time() - beginClock) <= time_duration):
         pub.publish(twist)
         print i
         i+=1
         rate.sleep()
     rospy.loginfo(time.time())
-    rospy.loginfo("1 second!")
+    rospy.loginfo("%.2f second!" % time_duration)
 
 if __name__ == '__main__':
     rospy.init_node('move_test_node', anonymous=True)
