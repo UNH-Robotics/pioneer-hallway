@@ -3,3 +3,4 @@ build/
 .catkin_workspace
 src/simple_navigation_goals/
 src/pioneer_hallway/executive/.*
+src/pioneer_hallway/executive/exec.log

@@ -58,6 +58,7 @@ if args.simulation:
   simulation_flag = "-simulator"
 
 projected_pose = (0.0, 0.0, 0.0, 0.0)
+projected_pose2 = (0.0, 0.0, 0.0, 0.0)
 predicted_pose = (0.0, 0.0, 0.0)
 vel = 0.0
 goal_is_set = True
@@ -134,25 +135,31 @@ def obstacles(dt, steps):
 def exec_control_pub(action):
     pub.publish(action)
 
-def update_cur(action, projection):
+def update_cur(action, action2, projection):
     #log_file.write("update_cur action: " + str(action) + "\n")
     planner_action = action[0]
+    planner_action2 = action2[0]
     state = (str(predicted_pose[0]), str(predicted_pose[1]), str(vel), str(predicted_pose[2]))
-    if planner_action == "":
+    if planner_action == "" or planner_action2 == "END":
       rospy.logfatal("NO ACTION RETURNED BY THE PLANNER, SHUTTING DOWN")
       rospy.logfatal("DID YOU SET UP THE ARGUMENTS???")
+      rospy.logfatal("ARE WE AT A GOAL???")
       rospy.logerr(parser.print_help())
       log_file.write(data_log)
       log_file.close()
       exit()
     cur_primitive = primitives[planner_action]
+    cur_primitive2 = primitives[planner_action2] 
     rospy.logdebug(str(cur_primitive.wa) + " " + str(cur_primitive.name) + " " + str(planner_action))
     rospy.logdebug(str(predicted_pose[0]) + " " + str(predicted_pose[1]) + " " + str(vel) + " " + str(predicted_pose[2]))
     project_pose = cur_primitive.apply(predicted_pose[0], predicted_pose[1], vel, 0, predicted_pose[2])
+    project_pose2 = cur_primitive2.apply(project_pose[0], project_pose[1], project_pose[3], 0, project_pose[2])
     next_state = projection[0].split(' ', 4)
+    next_state2 = projection[1].split(' ', 4)
     p_pose = projection[0].split(' ', 5)
-    pp = action[1].split(' ', 4)
+    p_pose2 = projection[1].split(' ',5)
 
+    pp = action[1].split(' ', 4)
     plan_pose = Pose()
     plan_pose.position.x = float(pp[0])
     plan_pose.position.y = float(pp[1])
@@ -165,16 +172,24 @@ def update_cur(action, projection):
     plannerPosesPub.publish(plannerPoses) 
   
     global projected_pose
+    global projected_pose2
     #projected_pose = (float(next_state[1]), float(next_state[2]), float(next_state[3]), float(next_state[4]))
     if args.projection:
       projected_pose = (project_pose[0], project_pose[1], project_pose[3], project_pose[2]) 
+      projected_pose2 = (project_pose2[0], project_pose2[1], project_pose2[3], project_pose2[2])
     else:
       projected_pose = (float(p_pose[1]), float(p_pose[2]), float(p_pose[3]), float(p_pose[4]))
+      projected_pose2 = (float(p_pose2[1]), float(p_pose2[2]), float(p_pose2[3]), float(p_pose2[4]))
 
 def print_projected_pose(delimiter):
   return str(projected_pose[0]) + delimiter + str(projected_pose[1]) + delimiter \
      + str(projected_pose[2]) + delimiter + str(projected_pose[3])
-    
+
+def print_projected_pose2(delimiter):
+   return str(projected_pose2[0]) + delimiter + str(projected_pose2[1]) + delimiter \
+     + str(projected_pose2[2]) + delimiter + str(projected_pose2[3])
+
+ 
 def print_predicted_pose(delimiter):
   return str(predicted_pose[0]) + delimiter + str(predicted_pose[1]) + delimiter \
     + str(vel) + delimiter + str(predicted_pose[2])
@@ -266,7 +281,7 @@ def check_planner_for_msg(p, nbsr):
           log_file.write(data_log)
           log_file.close()
           exit()
-          return (None,t_time, projection, plan)
+          return (None,None,t_time, projection, plan)
         else:
           rospy.logdebug(plan[0])
           if plan[0].split(' ',1)[0] == "END":
@@ -276,7 +291,7 @@ def check_planner_for_msg(p, nbsr):
             log_file.write(data_log)
             log_file.close()
             exit()
-          return (plan[0].split(' ',1),t_time, projection, plan)
+          return (plan[0].split(' ',1),plan[1].split(' ',1), t_time, projection, plan)
     except Exception, e:
         rospy.logfatal("EXECUTIVE OR ROSMASTER HAS FAILED, SHUTTING DOWN")
         rospy.logfatal("DID YOU SET UP THE ARGUMENTS???")
@@ -285,7 +300,7 @@ def check_planner_for_msg(p, nbsr):
         log_file.write(data_log)
         log_file.close()
         exit()
-        return (None,t_time, projection, plan)
+        return (None,None, t_time, projection, plan)
 
 
 def publish_plan(plan,projection):
@@ -357,12 +372,12 @@ if __name__ == '__main__':
             success = send_msg_to_planner(planner, nbsr, t_time)
             time.sleep(0.240)
             #check for the action to be in the queue
-            (action, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
-            update_cur(action, projection)
+            (action, action2, t_time, projection, plan) = check_planner_for_msg(planner, nbsr)
+            update_cur(action, action2, projection)
 #            rospy.loginfo("planner_time: " + str(planner_start_time - end_time))
             data_log += "action_from_planner: " + action[0] + "\n"
 #            log_file.write("action_from_planner: " + action[0] + "\n")
-            cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + "\n"
+            cont_msg = action[0] + "," + print_projected_pose(",") + "," + str(t_time) + ";" + action2[0] + "," + print_projected_pose2(",") + "," + str(t_time + 250) + "\n"
             data_log += "msg_to_controller: " + cont_msg + "\n"
 #            log_file.write("msg_to_controller: " + cont_msg + "\n")
             exec_control_pub(cont_msg)
