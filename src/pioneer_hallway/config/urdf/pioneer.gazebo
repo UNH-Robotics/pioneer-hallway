@@ -104,7 +104,7 @@
 		<sensor type="ray" name="head_hokuyo_sonarB">
       <pose>0 0 0 0 0 0</pose>
       <visualize>false</visualize>
-      <update_rate>10</update_rate>
+      <update_rate>60</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -138,7 +138,7 @@
 		<sensor type="ray" name="head_hokuyo_sonarF">
       <pose>0 0 0 0 0 0</pose>
       <visualize>false</visualize>
-      <update_rate>10</update_rate>
+      <update_rate>60</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -178,7 +178,7 @@
     <sensor type="ray" name="head_hokuyo_sensor">
       <pose>0 0 0 0 0 0</pose>
       <visualize>false</visualize>
-      <update_rate>10</update_rate>
+      <update_rate>60</update_rate>
       <ray>
         <scan>
           <horizontal>
