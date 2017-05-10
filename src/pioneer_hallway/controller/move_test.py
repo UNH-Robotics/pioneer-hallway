@@ -40,7 +40,7 @@ def amclpose_callback(data):
                   # "orientation y: %.7f" %data.pose.pose.orientation.y + "\n" +
                   # "orientation z: %.7f" %data.pose.pose.orientation.z + "\n" +
                   # "orientation w: %.7f" %data.pose.pose.orientation.w + "\n" +
-                  "h: %.2f" %h)
+                  "h: %.7f" %h)
 
 def rosaria_twist_callback(data):
     rospy.loginfo(rospy.get_caller_id() + 'Get latest twist info: \n' + 
@@ -56,15 +56,18 @@ def move_test():
     #here,we publish actions to the topic 'cmd_vel_request'
     pub = rospy.Publisher('cmd_vel_request', Twist, queue_size=10)
     twist = Twist()
-    twist.linear.x = 0.3
-    twist.angular.z = 0
+    twist.linear.x = 3.0
+    twist.angular.z = 0.3
     
     pub.publish(twist)
     rate = rospy.Rate(60)
     beginClock = time.time()    
     rospy.loginfo(beginClock)
+    i=1
     while((time.time() - beginClock) <= 1.0):
         pub.publish(twist)
+        print i
+        i+=1
         rate.sleep()
     rospy.loginfo(time.time())
     rospy.logerr("1 second!")
