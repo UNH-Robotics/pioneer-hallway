@@ -210,23 +210,24 @@ def sampling_based_controller(refAction, start, end, endClock):
         twist.angular.z = 0
         print "over shooting"
     else: 
-        vCandidate = np.random.uniform(0, 3.0, samplingNum)
-        wCandidate = np.random.uniform(-5.3, 5.3, samplingNum)
+        vCandidate = np.random.uniform(0, 0.75, samplingNum)
+        wCandidate = np.random.uniform(-1.73, 1.73, samplingNum)
         for i in range(samplingNum):
             goalX = start.x + vCandidate[i] * deltaT * math.cos(
-                start.h + wCandidate[i] * deltaT / 2)
+                start.h)
             goalY = start.y + vCandidate[i] * deltaT * math.sin(
-                start.h + wCandidate[i] * deltaT / 2)
-            goalH = start.h + wCandidate[i] * deltaT/2
+                start.h)
+            #+ wCandidate[i] * deltaT / 2
+            goalH = start.h + wCandidate[i] * deltaT
             #(1-vCandidate[i]/3)*
             disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
                              math.pow(goalY - end.y, 2.0))
             #disH = abs(goalH - end.h) % (2 * math.pi)
             disH = abs(goalH - end.h)
             disV = abs(vCandidate[i] - end.v)
-            totalDis = disP / disUnit_postion #+ \
-                       #disH / disUnit_heading + \
-                       #disV / disUnit_velocity
+            totalDis = disP / disUnit_postion + \
+                       disH / disUnit_heading + \
+                       disV / disUnit_velocity
             if totalDis < goalOffset:
                 goalOffset = totalDis
                 twist.linear.x = vCandidate[i]
@@ -512,14 +513,14 @@ def move():
                 changePlan = 0
                 break
             if getNewState: 
-                # motion= sampling_based_controller(motions[currentAction],
-                #                                   currentState,
-                #                                   goalState,
-                #                                   endClock)
-                motion= model_predictive_controller(motions[currentAction],
-                                                    currentState,
-                                                    goalState,
-                                                    endClock)
+                motion= sampling_based_controller(motions[currentAction],
+                                                  currentState,
+                                                  goalState,
+                                                  endClock)
+                # motion= model_predictive_controller(motions[currentAction],
+                #                                     currentState,
+                #                                     goalState,
+                #                                     endClock)
                 # biController = Controller(motions[currentAction],
                 #                                     currentState,
                 #                                     goalState,
