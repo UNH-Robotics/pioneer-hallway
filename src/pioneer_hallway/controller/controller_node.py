@@ -514,6 +514,7 @@ def move():
         plannerPathPub.publish(plannerPath)
         print len(plannerPath.poses)
         pubrate = rospy.Rate(1000)
+        getNewState=1#reset received current, to prevent dead lock
         while((time.time() - beginClock) <= duration):
             if changePlan:
                 changePlan = 0
