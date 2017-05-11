@@ -202,30 +202,38 @@ def sampling_based_controller(refAction, start, end, endClock):
     goalY_est = 0
     goalH_est = 0
     twist = Twist()
-    vCandidate = np.random.uniform(0, 3.0, samplingNum)
-    wCandidate = np.random.uniform(-5.3, 5.3, samplingNum)
-    for i in range(samplingNum):
-        goalX = start.x + vCandidate[i] * deltaT * math.cos(
-            start.h + wCandidate[i] * deltaT / 2)
-        goalY = start.y + vCandidate[i] * deltaT * math.sin(
-            start.h + wCandidate[i] * deltaT / 2)
-        goalH = start.h + wCandidate[i] * deltaT/2
-        #(1-vCandidate[i]/3)*
-        disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
-                        math.pow(goalY - end.y, 2.0))
-        #disH = abs(goalH - end.h) % (2 * math.pi)
-        disH = abs(goalH - end.h)
-        disV = abs(vCandidate[i] - end.v)
-        totalDis = disP / disUnit_postion #+ \
-                   #disH / disUnit_heading + \
-                   #disV / disUnit_velocity
-        if totalDis < goalOffset:
-            goalOffset = totalDis
-            twist.linear.x = vCandidate[i]
-            twist.angular.z = wCandidate[i]
-            goalX_est = goalX
-            goalY_est = goalY
-            goalH_est = goalH
+    #check if over shooting
+    disSE = math.sqrt(math.pow(start.x - end.x, 2.0) +
+                        math.pow(start.y - end.y, 2.0))
+    if disSE < 0.01:
+        twist.linear.x = 0
+        twist.angular.z = 0
+        print "over shooting"
+    else: 
+        vCandidate = np.random.uniform(0, 3.0, samplingNum)
+        wCandidate = np.random.uniform(-5.3, 5.3, samplingNum)
+        for i in range(samplingNum):
+            goalX = start.x + vCandidate[i] * deltaT * math.cos(
+                start.h + wCandidate[i] * deltaT / 2)
+            goalY = start.y + vCandidate[i] * deltaT * math.sin(
+                start.h + wCandidate[i] * deltaT / 2)
+            goalH = start.h + wCandidate[i] * deltaT/2
+            #(1-vCandidate[i]/3)*
+            disP = math.sqrt(math.pow(goalX - end.x, 2.0) +
+                             math.pow(goalY - end.y, 2.0))
+            #disH = abs(goalH - end.h) % (2 * math.pi)
+            disH = abs(goalH - end.h)
+            disV = abs(vCandidate[i] - end.v)
+            totalDis = disP / disUnit_postion #+ \
+                       #disH / disUnit_heading + \
+                       #disV / disUnit_velocity
+            if totalDis < goalOffset:
+                goalOffset = totalDis
+                twist.linear.x = vCandidate[i]
+                twist.angular.z = wCandidate[i]
+                goalX_est = goalX
+                goalY_est = goalY
+                goalH_est = goalH
     print "get new action to: ", end.x, end.y, end.v, end.h, "\naction: ", twist.linear.x, twist.angular.z, "\ngoalEST: ", goalX_est, goalY_est, goalH_est, "\noffset", goalOffset, "\nstartvw: ", start.v, start.w, "\nstartxyh: ", start.x, start.y, start.h, "\nprim: ", refAction[0], refAction[1], "\ndT: ", deltaT
     return twist
 
