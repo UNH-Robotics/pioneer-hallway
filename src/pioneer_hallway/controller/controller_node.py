@@ -154,7 +154,7 @@ def amclpose_callback(data):
         data.pose.pose.orientation.z,
         data.pose.pose.orientation.w)
     euler = tf.transformations.euler_from_quaternion(quaternion)
-    h = euler[2]
+    h = float(euler[2])
     # rospy.loginfo(rospy.get_caller_id() + 'Get latest pose info: \n' + 
     #               "position x: %.7f" %data.pose.pose.position.x + "\n" +
     #               "position y: %.7f" %data.pose.pose.position.y + "\n" +
@@ -169,7 +169,7 @@ def amclpose_callback(data):
        data.pose.pose.position.y != currentState.y:
         currentState.set_pose(data.pose.pose.position.x,
                               data.pose.pose.position.y,
-                              float("%.2f" % h),
+                              h,
                               time.time())
         getNewState = 1
     # with open(trajectoryFileName, 'a') as f:

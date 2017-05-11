@@ -53,12 +53,12 @@ def amclpose_callback(data):
 
 def rosaria_twist_callback(data):
     rospy.loginfo(rospy.get_caller_id() + 'Get latest twist info: \n' + 
-                  "linear x: %.2f" % data.twist.twist.linear.x + "\n" + 
-                  "angular z: %.2f" % data.twist.twist.angular.z)
+                  "linear x: %.7f" % data.twist.twist.linear.x + "\n" + 
+                  "angular z: %.7f" % data.twist.twist.angular.z)
 
 def laser_callback(data):
     rospy.loginfo(rospy.get_caller_id() + 'Get latest laster info: \n' + 
-                  "middle: %.2f" % data.ranges[540] + "\n")
+                  "middle: %.7f" % data.ranges[370] + "\n")
     
 
 def move_test():
