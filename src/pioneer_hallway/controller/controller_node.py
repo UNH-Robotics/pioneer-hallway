@@ -51,7 +51,7 @@ getNewState = 0
 #velocityWeight = 0.33
 samplingNum = 3000
 sampleScale_pos = 0.1
-sampleScale_h = 0.1
+sampleScale_h = 0.01
 disUnit_postion =0.01
 disUnit_heading = 3 * math.pi / 180
 disUnit_velocity = 0.15
@@ -520,14 +520,14 @@ def move():
                 changePlan = 0
                 break
             if getNewState: 
-                motion= sampling_based_controller(motions[currentAction],
-                                                  currentState,
-                                                  goalState,
-                                                  endClock)
-                # motion= model_predictive_controller(motions[currentAction],
-                #                                     currentState,
-                #                                     goalState,
-                #                                     endClock)
+                # motion= sampling_based_controller(motions[currentAction],
+                #                                   currentState,
+                #                                   goalState,
+                #                                   endClock)
+                motion= model_predictive_controller(motions[currentAction],
+                                                    currentState,
+                                                    goalState,
+                                                    endClock)
                 # biController = Controller(motions[currentAction],
                 #                                     currentState,
                 #                                     goalState,
