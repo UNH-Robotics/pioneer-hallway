@@ -1,0 +1,121 @@
+Type Pioneer             ; Type
+SubType p3atiw-sh        ; Subtype
+Name P3-AT               ; Name
+SerNum Serial            ; Serial Number
+Ticks/mm 170             ; range [0, 65535],  Ticks/mm
+FreeSpace 0              ; range [0, 32767],  FreeSpace
+RevCount 37700           ; range [0, 65535],  RevCount
+DriftFactor 0            ; range [-32768, 32767],  DriftFactor
+BattConv 0               ; range [0, 1],  BattConv (0=12V, 1=24V conversion
+                         ; factors)
+LowBattery 115           ; range [0, 32767],  LowBattery (1/10 volt increments)
+ShutdownVolts 105        ; range [0, 360],  ShutdownVolts (Batt V)
+HostBaud 0               ; range [0, 4],  HostBaud (0=9.6K, 1=19.2K, 2=38.4K
+                         ; 3=57.6K 4=115K)
+AuxBaud1 0               ; range [0, 4],  AuxBaud1 (0=9.6K, 1=19.2K, 2=38.4K
+                         ; 3=57.6K 4=115K)
+AuxBaud2 0               ; range [0, 4],  AuxBaud2 (0=9.6K, 1=19.2K, 2=38.4K
+                         ; 3=57.6K 4=115K)
+AuxBaud3 0               ; range [0, 4],  AuxBaud3 (0=9.6K, 1=19.2K, 2=38.4K
+                         ; 3=57.6K 4=115K)
+SipCycle 100             ; range [1, 1000],  SIP Cycle (in 1 ms increments)
+WatchDog 2000            ; range [0, 65535],  WatchDog (ms)
+SoundTog 1               ; range [0, 1],  SoundTog (0=mute buzzer, 1=sounds on)
+SonarCycle 40            ; range [1, 255],  SonarCycle (time in ms)
+Sonar1 12345678          ; Sonar1 (array ping sequence 1-8; 0=disable)
+Sonar2 0                 ; Sonar2 (array ping sequence 1-8; 0=disable)
+Sonar3 0                 ; Sonar3 (array ping sequence 1-8; 0=disable)
+Sonar4 0                 ; Sonar4 (array ping sequence 1-8; 0=disable)
+HasGyro 0                ; range [0, 4],  HasGyro 1=AN client, 2=AN firmware,
+                         ; 3=SPI, 4=IMU)
+gyroCW 950               ; range [1, 2000],  GyroCW calibration factor
+GyroCCW 950              ; range [1, 2000],  GyroCCW calibration factor
+GyroRateLimit 0          ; range [0, 1000],  GyroRateLimit
+GyroRange 0              ; range [0, 3],  GyroRange (SPI only)
+                         ; 1=75/80,2=150/160,0|3=300/320
+HasBrakes 0              ; range [0, 1],  HasBrakes (0=no, 1=yes)
+Charger 0                ; range [0, 4],  Charger (1=P3/PeopleBot 2=X
+                         ; 3=PatrolBot 4=PowerBot)
+ChargeThreshold 0        ; range [0, 1023],  ChargeThreshold (PowerBot only)
+Gripper 0                ; range [0, 2],  Gripper (0=disabled, 1=Pioneer,
+                         ; 2=PeopleBot)
+Tcm2 0                   ; range [0, 3],  TCM2 module (0=disabled, 1=Aux1,
+                         ; 2=Aux2 3=Aux3)
+LCD 0                    ; range [0, 3],  LCD (0=no LCD, 1=Aux1, 2=Aux2,
+                         ; 3=Aux3)
+FrontBumps 0             ; range [0, 65535],  FrontBumps (# of segments)
+RearBumps 0              ; range [0, 65535],  RearBumps (# of segments)
+InvertBumps 0            ; range [0, 3],  InvertBumps (0=neither, 1=front,
+                         ; 2=rear, 3=both)
+BumpStall 0              ; range [0, 3],  BumpStall (0=both, 1=rear, 2=front,
+                         ; 3=disabled)
+frontIRs 0               ; FrontIRs Associate IR# with front bumper pos's:
+rearIRs 0                ; RearIRs Associate IR# with rear bumper pos's:
+InvertIRs 0              ; range [0, 3],  InvertIRs (0=neither, 1=front,
+                         ; 2=rear, 3=both)
+StallVal 250             ; range [0, 65535],  StallVal (0-500, never if >
+                         ; pwmmax)
+StallCount 200           ; range [0, 65535],  StallCount (10ms increments)
+PwmMax 500               ; range [0, 65535],  PwmMax (0-500)
+RotVelTop 360            ; range [0, 65535],  RotVelTop (deg/sec)
+TransVelTop 1500         ; range [0, 65535],  TransVelTop (mm/sec)
+RotAccTop 300            ; range [0, 65535],  RotAccTop (deg/sec/sec)
+TransAccTop 2000         ; range [0, 65535],  TransAccTop (mm/sec/sec)
+RotVelMax 100            ; range [0, 65535],  RotVelMax (deg/sec)
+transVelMax 750          ; range [0, 65535],  TransVelMax (mm/sec)
+RotAcc 100               ; range [0, 65535],  RotAcc (deg/sec/sec)
+RotDecel 100             ; range [0, 65535],  RotDecel (deg/sec/sec)
+RotKp 40                 ; range [0, 65535],  RotKp
+RotKv 20                 ; range [0, 65535],  RotKv
+RotKi 0                  ; range [0, 65535],  RotKi
+TransAcc 300             ; range [0, 4000],  TransAcc (mm/sec/sec)
+TransDecel 300           ; range [0, 4000],  TransDecel (mm/sec/sec)
+TransKp 40               ; range [0, 65535],  TransKp
+TransKv 30               ; range [0, 65535],  TransKv
+TransKi 0                ; range [0, 65535],  TransKi
+Joystick 1               ; range [0, 1],  JoyStick Type 0=analog, 1=inductive
+JoySafe 0                ; range [0, 1],  JoySafe joystick Safety Mode 0=SAFE,
+                         ; 1=UNSAFE
+JoyVelMax 750            ; range [0, 2200],  JoyVelMax (mm/sec)
+JoyRVelMax 100           ; range [0, 360],  JoyRVelMax (deg/sec)
+armport 0                ; range [0, 3],  armPort 0=no arm, 1=Aux1, 2=Aux2
+                         ; 3=Aux3
+numjoints 6              ; range [0, 65535],  NumJoints # of arm joints
+AutoPark 300             ; range [-32768, 32767],  AutoPark seconds
+GripperPark 60           ; range [-32768, 32767],  GripperPark seconds
+Home1 110                ; range [0, 255],  Home1
+Home2 20                 ; range [0, 255],  Home2
+Home3 15                 ; range [0, 255],  Home3
+Home4 130                ; range [0, 255],  Home4
+Home5 230                ; range [0, 255],  Home5
+Home6 140                ; range [0, 255],  Home6
+Speed1 20                ; range [0, 255],  Speed1
+Speed2 20                ; range [0, 255],  Speed2
+Speed3 20                ; range [0, 255],  Speed3
+Speed4 20                ; range [0, 255],  Speed4
+Speed5 20                ; range [0, 255],  Speed5
+Speed6 20                ; range [0, 255],  Speed6
+Max1 255                 ; range [0, 255],  Max1
+Max2 255                 ; range [0, 255],  Max2
+Max3 255                 ; range [0, 255],  Max3
+Max4 255                 ; range [0, 255],  Max4
+Max5 255                 ; range [0, 255],  Max5
+Max6 255                 ; range [0, 255],  Max6
+Min1 0                   ; range [0, 255],  Min1
+Min2 0                   ; range [0, 255],  Min2
+Min3 0                   ; range [0, 255],  Min3
+Min4 0                   ; range [0, 255],  Min4
+Min5 0                   ; range [0, 255],  Min5
+Min6 0                   ; range [0, 255],  Min6
+Center1 130              ; range [0, 255],  Center1
+Center2 150              ; range [0, 255],  Center2
+Center3 100              ; range [0, 255],  Center3
+Center4 130              ; range [0, 255],  Center4
+Center5 110              ; range [0, 255],  Center5
+Center6 130              ; range [0, 255],  Center6
+TicksPer90Deg1 104       ; range [0, 255],  TicksPer90Deg1
+TicksPer90Deg2 96        ; range [0, 255],  TicksPer90Deg2
+TicksPer90Deg3 96        ; range [0, 255],  TicksPer90Deg3
+TicksPer90Deg4 103       ; range [0, 255],  TicksPer90Deg4
+TicksPer90Deg5 109       ; range [0, 255],  TicksPer90Deg5
+TicksPer90Deg6 100       ; range [0, 255],  TicksPer90Deg6

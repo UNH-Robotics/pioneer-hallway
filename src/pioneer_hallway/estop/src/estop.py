@@ -36,7 +36,7 @@ sonarOffset = -0.198 #value grabbed from pioneer3dx.xacro
 laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
 
 #value in m/s**2
-maxDecelF = 0.9
+maxDecelF = 0.875
 maxDecelB = 0.8
 
 def polar_to_euclidean( angles, ranges ):
