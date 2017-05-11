@@ -264,14 +264,17 @@ if __name__ == '__main__':
             # send the msg to the planner store the time it took
             #cur_clock, action = send_msg_to_planner(master_clock, planner, nbsr)
             #y = y0 - 0.5 * a * math.pow(i * t, 2)
+          if v<0.75:
             x = x0 + 0.5 * a * math.pow(i * t, 2)
             v = a * i * t
-            action = "a31," + str(x) + "," +str(y0)+ " ," + str(v) + ",0,12312"
-            exec_control_pub(action)
-            #update_cur(action)
-            i += 1;
-            print i
-            time.sleep(t)
+          else:
+            x=x+v*t
+          action = "a31," + str(x) + "," +str(y0)+ " ," + str(v) + ",0,12312"
+          exec_control_pub(action)
+          #update_cur(action)
+          i += 1;
+          print i
+          time.sleep(t)
 
         # while (x < 4):
         #     # rospy.loginfo("ellasped time: " + str(time.time()-cur_clock))
