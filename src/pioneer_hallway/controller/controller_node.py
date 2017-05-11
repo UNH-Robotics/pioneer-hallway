@@ -163,11 +163,15 @@ def amclpose_callback(data):
     #               # "orientation z: %.7f" %data.pose.pose.orientation.z + "\n" +
     #               # "orientation w: %.7f" %data.pose.pose.orientation.w + "\n" +
     #               "h: %.2f" %h)
-    currentState.set_pose(data.pose.pose.position.x,
-                          data.pose.pose.position.y,
-                          float("%.2f" % h),
-                          time.time())
-    getNewState = 1
+    #update only received a different state
+    if h!=currentState.h or \
+       data.pose.pose.position.x != currentState.x or \
+       data.pose.pose.position.y != currentState.y:
+        currentState.set_pose(data.pose.pose.position.x,
+                              data.pose.pose.position.y,
+                              float("%.2f" % h),
+                              time.time())
+        getNewState = 1
     # with open(trajectoryFileName, 'a') as f:
     #     f.write( "%.2f" %data.pose.pose.position.x + "," +
     #              "%.2f" %data.pose.pose.position.y + "," + 
