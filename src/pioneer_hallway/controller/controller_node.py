@@ -134,13 +134,15 @@ def pose_callback(data):
     #               "position x: %.2f" %data.pose.pose.position.x + "\n" +
     #               "position y: %.2f" %data.pose.pose.position.y + "\n" +
     #               "heading h: %.2f" %h )
-    currentState = State(data.pose.pose.position.x,
-                         data.pose.pose.position.y,
-                         data.twist.twist.linear.x,
-                         h,
-                         time.time(), 
-                         data.twist.twist.angular.z)
-    getNewState = 1
+    #update only received a different state
+    if h!=currentState.h:
+        currentState = State(data.pose.pose.position.x,
+                             data.pose.pose.position.y,
+                             data.twist.twist.linear.x,
+                             h,
+                             time.time(), 
+                             data.twist.twist.angular.z)
+        getNewState = 1
 
     
 def amclpose_callback(data):
