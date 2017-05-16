@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+#emergency stop module created for the pioneer hallway project
+#it is capable of stopping the robot from hitting an obstacle
+#will only stop for obstacles detected by the sonars or lasers 
+#therefore, if the obstacle's height is lower than these sensors
+#the robot will not stop. After estop has been triggered it must
+#be executed again before operating the robot.
+
 import rospy
 import roslib
 import math
@@ -28,7 +35,7 @@ frame = 'map'
 #values in meters
 robotLength = 0.511 #value grabbed from /usr/local/Aria/params/p3dx.p
 robotWidth = 0.381 #value grabbed from /usr/local/Aria/params/p3dx.p
-robotLCushion = 0.06
+robotLCushion = 0.08
 robotWCushion = 0.08
 robotLengthFromCenter = (robotLength + robotLCushion) / 2
 robotWidthFromCenter = (robotWidth + robotWCushion) / 2
@@ -39,6 +46,7 @@ laserOffset = 0.17 #value grabbed from pioneer3dx.xacro
 maxDecelF = 0.875
 maxDecelB = 0.8
 
+#converts laser readings to points in the map
 def polar_to_euclidean( angles, ranges ):
     return [ [ np.cos(theta)*r, np.sin(theta)*r ] for 
            theta, r in zip( angles, ranges ) ]
@@ -77,6 +85,7 @@ def calculatePolygons(deltaT):
 	#rotate robot frame
 	robotFrameA = Point32(robotLengthFromCenter, robotWidthFromCenter, 0)
 	robotFrameB = Point32(robotLengthFromCenter, -robotWidthFromCenter, 0)
+	#15 cms added to account for the laptop mounted on the robot
 	robotFrameC = Point32(-robotLengthFromCenter - 0.15, robotWidthFromCenter, 0)
 	robotFrameD = Point32(-robotLengthFromCenter - 0.15, -robotWidthFromCenter, 0)
 	rotatePose(robotFrameA, currPose.orientation)
@@ -119,6 +128,7 @@ def calculatePolygons(deltaT):
 
 	return polyPred
 
+#stops the robot and disables the publisher
 def triggerEstop(polygon):
 	global collision
 	collision = True
@@ -220,7 +230,10 @@ def evaluateReadings(pc):
 		timeIncrement = deltaT / 4
 		currTime = timeIncrement
 		while currTime <= deltaT and not collision:
+			#gets the predicted position for the current time
 			polygon = calculatePolygons(currTime)
+			#verifies if any of the points in the point cloud (sensor readings)
+			#is in the predicted position box
 			A = Point32(polygon.polygon.points[1].x - polygon.polygon.points[0].x, 
 			     polygon.polygon.points[1].y - polygon.polygon.points[0].y, 0)
 			B = Point32(polygon.polygon.points[3].x - polygon.polygon.points[0].x, 

@@ -310,6 +310,7 @@ main(int argc, char** argv)
   ros::init(argc, argv, "amcl");
   ros::NodeHandle nh;
   
+  //used for position based updates
   double maxDeltaPose = 0.0;
   double maxDeltaAngle = 0.0;
   ros::param::param<double>("maxDeltaPose", maxDeltaPose, 0.0);
@@ -326,9 +327,11 @@ main(int argc, char** argv)
   {
 		amcl_node_ptr->setMaxDeltas(maxDeltaPose, maxDeltaAngle);
     // run using ROS input
+    //TODO: set rate as a parameter in the launch file
     ros::Rate loop_rate(60);
 		while (ros::ok())
 		{
+			//evaluates laser readings
 			amcl_node_ptr->evaluateSensorData();
 			ros::spinOnce();
 			loop_rate.sleep();
@@ -482,6 +485,7 @@ AmclNode::AmclNode() :
   m_force_update = false;
   
   //used for position based updates
+  //suscribes to the pose topic in order to verify if the robot is moving
   pose_sub_ = nh_.subscribe("RosAria/pose", 1, &AmclNode::poseCB, this);
   force_resample = false;
   
@@ -497,26 +501,32 @@ AmclNode::AmclNode() :
                                        boost::bind(&AmclNode::checkLaserReceived, this, _1));
 }
 
+/*calculates the distance that the robot has moved since the last time
+ * the sensor readings were evaluated */
 double AmclNode::calculateDeltaDistance()
 {
 	return sqrt(pow(last_published_position.x - last_received_position.x, 2) +
 							pow(last_published_position.y - last_received_position.y, 2));
 }
 
+/*calculates the heading difference since the last time the sensor
+ * readings were evaluated*/
 double AmclNode::calculateDeltaAngle()
 {
 	return abs(last_published_position.z - last_received_position.z);
 }
 
+/*evaluates the sensor information if the robot's position or heading
+ * have changed*/
 void AmclNode::evaluateSensorData()
 {
-	//double d = calculateDeltaDistance();
-	//double a = calculateDeltaAngle();
+	double d = calculateDeltaDistance();
+	double a = calculateDeltaAngle();
 	//ROS_INFO("%f   %f   %f", d, a, max_delta_pose);
-	//if ((d > max_delta_pose || a > max_delta_angle) && last_laser != NULL)
-	if (last_laser != NULL)
+	//TODO: find correct values for deltas in real world environment
+	if ((d > max_delta_pose || a > max_delta_angle) && last_laser != NULL)
+	//if (last_laser != NULL)
 	{
-		//ROS_INFO("test");
 		last_published_position.x = last_received_position.x;
 		last_published_position.y = last_received_position.y;
 		last_published_position.z = last_received_position.z;
@@ -526,12 +536,14 @@ void AmclNode::evaluateSensorData()
 	}
 }
 
+/*stores the delta parameters*/
 void AmclNode::setMaxDeltas(double maxDeltaPose, double maxDeltaAngle)
 {
 	max_delta_pose = maxDeltaPose;
 	max_delta_angle = maxDeltaAngle;
 }
 
+/*callback executed when new odometry information is received from the robot*/
 void AmclNode::poseCB(const nav_msgs::Odometry& msg)
 {
 	last_received_position.x = msg.pose.pose.position.x;
